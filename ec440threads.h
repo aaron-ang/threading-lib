@@ -1,3 +1,5 @@
+#include <setjmp.h>
+
 #ifndef __EC440THREADS__
 #define __EC440THREADS__
 /*
@@ -8,28 +10,25 @@
  * You should use:
  *    - setjmp to save registers of current thread
  *    - longjump to restore registers of thread you are context switching to
- * These routines store the registers that are pointers in a mangled fashion, and hide
- * where different registers are. You can use:
- *    - the enum jump_buffer_location to identify where the register is in the buffer
- *    - the functions set_reg and get_reg to set and retrieve registers from this buffer
- * e.g.
- *   jmp_buf buf;
- *   setjmp(buf);
- *   pc = get_reg(buf, JBL_PC);
- *   pc = (unsigned long int)foo;  (where foo is a function you want to call)
+ * These routines store the registers that are pointers in a mangled fashion,
+ * and hide where different registers are. You can use:
+ *    - the enum jump_buffer_location to identify where the register is in the
+ * buffer
+ *    - the functions set_reg and get_reg to set and retrieve registers from
+ * this buffer e.g. jmp_buf buf; setjmp(buf); pc = get_reg(buf, JBL_PC); pc =
+ * (unsigned long int)foo;  (where foo is a function you want to call)
  *   set_reg(buf, JBL_PC, pc);
  */
 
 /*
  * Jump buffer location:
- * These constants define for current implementation of system libraries on our container
- * the registers held in various locations in the jump buffer when you call setjmp.
- * Note, these are not part of the public interface for jmp_buf, but are extracted from
- * internal private libc headers here:
+ * These constants define for current implementation of system libraries on our
+ * container the registers held in various locations in the jump buffer when you
+ * call setjmp. Note, these are not part of the public interface for jmp_buf,
+ * but are extracted from internal private libc headers here:
  *   https://elixir.bootlin.com/glibc/glibc-2.27/source/sysdeps/x86_64/jmpbuf-offsets.h
  */
-enum JBL
-{
+enum JBL {
   JBL_RBX = 0,
   JBL_RBP = 1,
   JBL_R12 = 2,
@@ -47,8 +46,7 @@ enum JBL
  * stored in jump buffers. This feature "mangles" a pointer before
  * saving it in a jmp_buf.
  */
-static unsigned long int _ptr_demangle(unsigned long int p)
-{
+static unsigned long int _ptr_demangle(unsigned long int p) {
   unsigned long int ret;
 
   asm("movq %1, %%rax;\n"
@@ -61,8 +59,7 @@ static unsigned long int _ptr_demangle(unsigned long int p)
   return ret;
 }
 
-static unsigned long int _ptr_mangle(unsigned long int p)
-{
+static unsigned long int _ptr_mangle(unsigned long int p) {
   unsigned long int ret;
 
   asm("movq %1, %%rax;\n"
@@ -75,10 +72,8 @@ static unsigned long int _ptr_mangle(unsigned long int p)
   return ret;
 }
 
-static void set_reg(jmp_buf *buf, enum JBL reg, unsigned long int val)
-{
-  switch (reg)
-  {
+static void set_reg(jmp_buf *buf, enum JBL reg, unsigned long int val) {
+  switch (reg) {
   case JBL_RBX:
   case JBL_RBP:
   case JBL_RSP:
@@ -95,10 +90,8 @@ static void set_reg(jmp_buf *buf, enum JBL reg, unsigned long int val)
   assert(0);
 }
 
-static unsigned long int get_reg(jmp_buf *buf, enum JBL reg)
-{
-  switch (reg)
-  {
+static unsigned long int get_reg(jmp_buf *buf, enum JBL reg) {
+  switch (reg) {
   case JBL_RBX:
   case JBL_RBP:
   case JBL_RSP:
@@ -127,8 +120,7 @@ static unsigned long int get_reg(jmp_buf *buf, enum JBL reg)
  * your new thread's PC to be ptr_mangle(start_thunk), and properly
  * assigning R12 and R13.
  */
-static void *start_thunk()
-{
+static void *start_thunk() {
   asm("popq %%rbp;\n"        // clean up the function prologue
       "movq %%r13, %%rdi;\n" // put arg in $rdi
       "pushq %%r12;\n"       // push &start_routine
@@ -140,11 +132,15 @@ static void *start_thunk()
 }
 
 // to supress compiler error say these static functions may not be used...
-static unsigned long int _ptr_mangle(unsigned long int p) __attribute__((unused));
-static unsigned long int _ptr_demangle(unsigned long int p) __attribute__((unused));
+static unsigned long int _ptr_mangle(unsigned long int p)
+    __attribute__((unused));
+static unsigned long int _ptr_demangle(unsigned long int p)
+    __attribute__((unused));
 
-static void set_reg(jmp_buf *buf, enum JBL reg, unsigned long int val) __attribute__((unused));
-static unsigned long int get_reg(jmp_buf *buf, enum JBL reg) __attribute__((unused));
+static void set_reg(jmp_buf *buf, enum JBL reg, unsigned long int val)
+    __attribute__((unused));
+static unsigned long int get_reg(jmp_buf *buf, enum JBL reg)
+    __attribute__((unused));
 static void *start_thunk() __attribute__((unused));
 
 #endif

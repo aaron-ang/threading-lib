@@ -1,8 +1,8 @@
 override CFLAGS := -Wall -Werror -std=gnu99 -O0 -g $(CFLAGS) -I.
 
 # you can uncomment following to add sanitizer for development; note make sure to not have this for submissions
-#override CFLAGS :=  -fsanitize=undefined $(CFLAGS) 
-#override LDFLAGS := -fsanitize=undefined -fsanitize=leak $(LDLAGS)  
+#override CFLAGS :=  -fsanitize=undefined $(CFLAGS)
+#override LDFLAGS := -fsanitize=undefined -fsanitize=leak $(LDLAGS)
 
 # Add any additional tests here
 test_files=./test_busy_threads
@@ -25,7 +25,7 @@ CC = gcc
 threads.o: threads.c ec440threads.h
 
 # rules to build each of the tests
-test_busy_threads.o : test_busy_threads.c 
+test_busy_threads.o : test_busy_threads.c
 test_busy_threads: test_busy_threads.o $(mythread)
 
 
