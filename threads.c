@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#ifndef PREEMPT
+#define PREEMPT 1 /* flag to enable preemption */
+#endif
+
 #define MAX_THREADS 128             /* number of threads you support */
 #define THREAD_STACK_SIZE (1 << 15) /* size of stack in bytes */
 #define QUANTUM (50 * 1000)         /* quantum in usec */
@@ -24,7 +28,7 @@ typedef struct thread_control_block {
   jmp_buf registers;
   void *stack;
   enum thread_status status;
-  void *exit_state;
+  void *ret_val;
 } TCB;
 
 TCB threads[MAX_THREADS];
@@ -37,12 +41,14 @@ void thread_init(TCB *new_thread);
 void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg);
 
 // to supress compiler error saying these static functions may not be used...
-static void schedule(int signal) __attribute__((unused));
+void schedule(int signal) __attribute__((unused));
 
-static void schedule(int signal) {
+void schedule(int signal) {
   if (threads[current_thread].status == TS_RUNNING) {
-    if (setjmp(threads[current_thread].registers))
+    int thread_id;
+    if ((thread_id = setjmp(threads[current_thread].registers))) {
       return;
+    }
     threads[current_thread].status = TS_READY;
   }
 
@@ -53,7 +59,7 @@ static void schedule(int signal) {
          current_thread != start_thread);
 
   threads[current_thread].status = TS_RUNNING;
-  longjmp(threads[current_thread].registers, 1);
+  longjmp(threads[current_thread].registers, threads[current_thread].id + 1);
 }
 
 static void scheduler_init() {
@@ -69,7 +75,9 @@ static void scheduler_init() {
   TCB *main_thread = get_new_thread();
   thread_init(main_thread);
   assert(num_threads == 1);
-  init_handler();
+  if (PREEMPT) {
+    init_handler();
+  }
   main_thread->status = TS_RUNNING;
 }
 
@@ -126,7 +134,7 @@ void pthread_exit(void *value_ptr) {
    * What would you do after this?
    */
   free(threads[current_thread].stack);
-  threads[current_thread].exit_state = value_ptr;
+  threads[current_thread].ret_val = value_ptr;
   threads[current_thread].status = TS_EXITED;
   schedule(0);
   exit(0);
@@ -146,7 +154,7 @@ int pthread_join(pthread_t thread, void **retval) {
    * retval passed by pthread_exit. You should clean up all information related
    * to the terminated thread that you did not on pthread_exit.
    */
-  *retval = threads[(long)thread].exit_state;
+  *retval = threads[(long)thread].ret_val;
   return 0;
 }
 
@@ -169,7 +177,7 @@ TCB *get_new_thread() {
 
 // Set up thread control block
 void thread_init(TCB *new_thread) {
-  new_thread->exit_state = NULL;
+  new_thread->ret_val = NULL;
   new_thread->stack = malloc(THREAD_STACK_SIZE);
   assert(new_thread->stack);
   if (setjmp(new_thread->registers))

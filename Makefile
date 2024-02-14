@@ -6,6 +6,13 @@ override CFLAGS := -Wall -Werror -std=gnu99 -O0 -g $(CFLAGS) -I.
 
 # Add any additional tests here
 test_files=./test_busy_threads
+custom_tests= ./test_one_thread ./test_custom_schedule
+
+PREEMPT=1
+ifeq ($(PREEMPT),0)
+  override CFLAGS += -DPREEMPT=0
+  test_files=$(custom_tests)
+endif
 
 all: check
 
@@ -26,8 +33,12 @@ threads.o: threads.c ec440threads.h
 
 # rules to build each of the tests
 test_busy_threads.o : test_busy_threads.c
-test_busy_threads: test_busy_threads.o $(mythread)
+test_custom_schedule.o : test_custom_schedule.c
+test_one_thread.o : test_one_thread.c
 
+test_busy_threads: test_busy_threads.o $(mythread)
+test_custom_schedule: test_custom_schedule.o $(mythread)
+test_one_thread: test_one_thread.o $(mythread)
 
 .PHONY: clean check checkprogs
 
