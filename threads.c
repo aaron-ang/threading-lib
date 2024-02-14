@@ -40,23 +40,17 @@ void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg);
 static void schedule(int signal) __attribute__((unused));
 
 static void schedule(int signal) {
-  /*
-     TODO: implement your round-robin scheduler, e.g.,
-     - if whatever called us is not exiting
-       - mark preempted thread as runnable
-       - save state of preempted thread
-     - determine which thread should be running next
-     - mark thread you are context switching to as running
-     - restore registers of that thread
-   */
   if (threads[current_thread].status == TS_RUNNING) {
     if (setjmp(threads[current_thread].registers))
       return;
     threads[current_thread].status = TS_READY;
   }
 
-  while (threads[current_thread].status != TS_READY)
+  int start_thread = current_thread;
+  do
     current_thread = (current_thread + 1) % num_threads;
+  while (threads[current_thread].status != TS_READY &&
+         current_thread != start_thread);
 
   threads[current_thread].status = TS_RUNNING;
   longjmp(threads[current_thread].registers, 1);
@@ -168,7 +162,7 @@ void init_handler() {
 TCB *get_new_thread() {
   int i = 0;
   while (threads[i].status != TS_EXITED)
-    i = (i + 1) % num_threads;
+    i = (i + 1) % MAX_THREADS;
   threads[i].id = i;
   return &threads[i];
 }
