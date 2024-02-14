@@ -1,5 +1,4 @@
 #include "ec440threads.h"
-#include <assert.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -20,19 +19,22 @@ enum thread_status { TS_EXITED, TS_RUNNING, TS_READY };
  * need one of this per thread. What information do you need in it?
  * Hint, remember what information Linux maintains for each task?
  */
-struct thread_control_block {
+typedef struct thread_control_block {
   int id;
   jmp_buf registers;
   void *stack;
   enum thread_status status;
   void *exit_state;
-};
+} TCB;
 
-struct thread_control_block threads[MAX_THREADS];
+TCB threads[MAX_THREADS];
 int current_thread = 0;
 int num_threads = 0;
-int new_thread_id = 1;
-struct sigaction sa;
+
+void init_handler();
+TCB *get_new_thread();
+void thread_init(TCB *new_thread);
+void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg);
 
 // to supress compiler error saying these static functions may not be used...
 static void schedule(int signal) __attribute__((unused));
@@ -43,7 +45,7 @@ static void schedule(int signal) {
      - if whatever called us is not exiting
        - mark preempted thread as runnable
        - save state of preempted thread
-     - determin which thread should be running next
+     - determine which thread should be running next
      - mark thread you are context switching to as running
      - restore registers of that thread
    */
@@ -69,6 +71,12 @@ static void scheduler_init() {
      schedule it
      - set up your timers to call scheduler...
   */
+  assert(num_threads == 0);
+  TCB *main_thread = get_new_thread();
+  thread_init(main_thread);
+  assert(num_threads == 1);
+  init_handler();
+  main_thread->status = TS_RUNNING;
 }
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
@@ -103,7 +111,14 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
    * our case). The address to return to after finishing start_routine
    * should be the first thing you push on your stack.
    */
-  return -1;
+  TCB *new_thread = get_new_thread();
+  *thread = (pthread_t)new_thread->id;
+
+  thread_init(new_thread);
+  reg_init(new_thread, start_routine, arg);
+
+  schedule(0);
+  return 0;
 }
 
 void pthread_exit(void *value_ptr) {
@@ -123,22 +138,63 @@ void pthread_exit(void *value_ptr) {
   exit(0);
 }
 
-pthread_t pthread_self(void) { return (pthread_t)threads[current_thread].id; }
+pthread_t pthread_self(void) {
+  /*
+   * TODO: Return the current thread instead of -1, note it is up to you what
+   * ptread_t refers to
+   */
+  return (pthread_t)threads[current_thread].id;
+}
 
 int pthread_join(pthread_t thread, void **retval) {
-  // TODO: wait for the thread identified by the ID “thread” to terminate.
-  // If that thread has already terminated, then it returns immediately with the
-  // retval passed by pthread_exit. You should clean up all information related
-  // to the terminated thread that you did not on pthread_exit.
+  /* TODO: wait for the thread identified by the ID “thread” to terminate.
+   * If that thread has already terminated, then it returns immediately with the
+   * retval passed by pthread_exit. You should clean up all information related
+   * to the terminated thread that you did not on pthread_exit.
+   */
   *retval = threads[(long)thread].exit_state;
   return 0;
 }
 
 void init_handler() {
-  sa.sa_handler = schedule;
-  sa.sa_flags = SA_NODEFER;
+  struct sigaction sa = {
+      .sa_handler = schedule,
+      .sa_flags = SA_NODEFER,
+  };
   sigaction(SIGALRM, &sa, NULL);
   ualarm(QUANTUM, QUANTUM);
+}
+
+TCB *get_new_thread() {
+  int i = 0;
+  while (threads[i].status != TS_EXITED)
+    i = (i + 1) % num_threads;
+  threads[i].id = i;
+  return &threads[i];
+}
+
+// Set up thread control block
+void thread_init(TCB *new_thread) {
+  new_thread->exit_state = NULL;
+  new_thread->stack = malloc(THREAD_STACK_SIZE);
+  assert(new_thread->stack);
+  if (setjmp(new_thread->registers))
+    return;
+  new_thread->status = TS_READY;
+  num_threads++;
+}
+
+// Set up registers
+void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg) {
+  unsigned long pc = get_reg(&new_thread->registers, JBL_PC);
+  pc = _ptr_mangle((unsigned long)start_thunk);
+  set_reg(&new_thread->registers, JBL_PC, pc);
+  set_reg(&new_thread->registers, JBL_R12, (unsigned long)start_routine);
+  set_reg(&new_thread->registers, JBL_R13, (unsigned long)arg);
+
+  unsigned long *sp = new_thread->stack + THREAD_STACK_SIZE;
+  set_reg(&new_thread->registers, JBL_RSP, (unsigned long)--sp);
+  *sp = (unsigned long)pthread_exit;
 }
 
 /*

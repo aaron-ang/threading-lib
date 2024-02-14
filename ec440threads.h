@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <setjmp.h>
 
 #ifndef __EC440THREADS__
