@@ -40,6 +40,9 @@ enum JBL {
   JBL_PC = 7
 };
 
+// to supress compiler error saying these static functions may not be used...
+void schedule(int signal) __attribute__((unused));
+
 /*
  * Unfortunately, there is a complication on the Linux systems in the
  * student/grading environment. These machines are equipped with a

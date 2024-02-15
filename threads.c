@@ -36,12 +36,12 @@ int current_thread = 0;
 int num_threads = 0;
 
 void init_handler();
-TCB *get_new_thread();
-void thread_init(TCB *new_thread);
-void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg);
 
-// to supress compiler error saying these static functions may not be used...
-void schedule(int signal) __attribute__((unused));
+TCB *get_new_thread();
+
+void thread_init(TCB *new_thread);
+
+void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg);
 
 void schedule(int signal) {
   if (threads[current_thread].status == TS_RUNNING) {
