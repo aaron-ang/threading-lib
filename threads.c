@@ -45,10 +45,8 @@ void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg);
 
 void schedule(int signal) {
   if (threads[current_thread].status == TS_RUNNING) {
-    int thread_id;
-    if ((thread_id = setjmp(threads[current_thread].registers))) {
+    if (setjmp(threads[current_thread].registers))
       return;
-    }
     threads[current_thread].status = TS_READY;
   }
 
@@ -57,6 +55,10 @@ void schedule(int signal) {
     current_thread = (current_thread + 1) % num_threads;
   while (threads[current_thread].status != TS_READY &&
          current_thread != start_thread);
+
+  if (current_thread == start_thread &&
+      threads[current_thread].status == TS_EXITED) // no more threads to run
+    return;
 
   threads[current_thread].status = TS_RUNNING;
   longjmp(threads[current_thread].registers, threads[current_thread].id + 1);
@@ -119,7 +121,6 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   thread_init(new_thread);
   reg_init(new_thread, start_routine, arg);
 
-  schedule(0);
   return 0;
 }
 
@@ -154,6 +155,11 @@ int pthread_join(pthread_t thread, void **retval) {
    * retval passed by pthread_exit. You should clean up all information related
    * to the terminated thread that you did not on pthread_exit.
    */
+
+  // TS_BLOCKED state?
+  if (threads[(long)thread].status != TS_EXITED)
+    schedule(0);
+
   *retval = threads[(long)thread].ret_val;
   return 0;
 }
