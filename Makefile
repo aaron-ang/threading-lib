@@ -14,6 +14,9 @@ ifeq ($(PREEMPT),0)
   test_files=$(custom_tests)
 endif
 
+# Build the threads.o file
+threads.o: threads.c ec440threads.h
+
 all: check
 
 # You might find it useful to write test programs and get them working against the installed pthreads
@@ -27,9 +30,6 @@ else
 endif
 
 CC = gcc
-
-# Build the threads.o file
-threads.o: threads.c ec440threads.h
 
 # rules to build each of the tests
 test_busy_threads.o: test_busy_threads.c
