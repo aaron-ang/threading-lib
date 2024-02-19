@@ -20,7 +20,7 @@ do
     	else
     		echo "FAIL (rc = ${rc})"
         fi
-        failed_tests+="${test_file} "
+        failed_tests+="${test_file}:(rc=${rc}) "
         fail_count=$((fail_count + 1))
 	fi
 done
