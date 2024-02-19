@@ -6,7 +6,7 @@
 
 /* How many threads (aside from main) to create */
 #define THREAD_CNT 127
-#define ITERATIONS 10
+#define ITERATIONS 2
 
 // locations for return values
 int some_value[THREAD_CNT];

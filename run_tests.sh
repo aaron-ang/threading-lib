@@ -12,12 +12,10 @@ do
 	rm -f testfs # Tidy up from previous tests
 	timeout ${TIMEOUT_SECONDS} ${test_file}
 	rc=$?
-	if [ ${rc} -eq 0 ]
-	then
+	if [ ${rc} -eq 0 ]; then
 		echo "PASS"
 	else
-    	if [ ${rc} -eq 124 ]
-    	then
+    	if [ ${rc} -eq 124 ]; then
     		echo "FAIL (${TIMEOUT_SECONDS} second timeout)"
     	else
     		echo "FAIL (rc = ${rc})"
