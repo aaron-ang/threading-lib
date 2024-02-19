@@ -4,6 +4,7 @@ TIMEOUT_SECONDS=5
 all_tests=$@
 test_count=$#
 fail_count=0
+failed_tests=""
 
 for test_file in $all_tests
 do
@@ -14,14 +15,21 @@ do
 	if [ ${rc} -eq 0 ]
 	then
 		echo "PASS"
-	elif [ ${rc} -eq 124 ]
-	then
-		echo "FAIL (${TIMEOUT_SECONDS} second timeout)"
-		fail_count=$((fail_count + 1))
 	else
-		echo "FAIL (rc = ${rc})"
-		fail_count=$((fail_count + 1))
+    	if [ ${rc} -eq 124 ]
+    	then
+    		echo "FAIL (${TIMEOUT_SECONDS} second timeout)"
+    	else
+    		echo "FAIL (rc = ${rc})"
+        fi
+        failed_tests+="${test_file} "
+        fail_count=$((fail_count + 1))
 	fi
 done
 
 echo "${fail_count} out of ${test_count} tests failed."
+
+if [ ${fail_count} -gt 0 ]
+then
+    echo "Failed tests: ${failed_tests}"
+fi
