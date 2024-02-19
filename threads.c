@@ -176,10 +176,12 @@ void init_handler() {
 }
 
 TCB *get_new_thread() {
-  int i = 0;
+  static int i = 0;
+  int seen = 0;
   while (threads[i].status != TS_EXITED || threads[i].stack) {
-    if (++i >= MAX_THREADS)
+    if (++seen >= MAX_THREADS)
       exit(EXIT_FAILURE);
+    i = (i + 1) % MAX_THREADS;
   }
   threads[i].id = i;
   return &threads[i];
