@@ -72,10 +72,9 @@ static void scheduler_init() {
   TCB *main_thread = get_new_thread();
   thread_init(main_thread);
   assert(num_threads == 1);
-  if (PREEMPT) {
-    init_handler();
-  }
   main_thread->status = TS_RUNNING;
+  if (PREEMPT)
+    init_handler();
 }
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
@@ -118,6 +117,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 
   thread_init(new_thread);
   reg_init(new_thread, start_routine, arg);
+  new_thread->status = TS_READY;
 
   return 0;
 }
@@ -157,10 +157,10 @@ int pthread_join(pthread_t thread, void **retval) {
   if (threads[id].status != TS_EXITED)
     schedule(0);
 
-  threads[id].stack = NULL;
-  memset(threads[id].registers, 0, sizeof(jmp_buf));
   *retval = threads[id].ret_val;
   threads[id].ret_val = NULL;
+  threads[id].stack = NULL;
+  memset(threads[id].registers, 0, sizeof(jmp_buf));
   num_threads--;
 
   return 0;
@@ -187,12 +187,10 @@ TCB *get_new_thread() {
   return &threads[i];
 }
 
-// Set up thread control block
+// Initialize the thread
 void thread_init(TCB *new_thread) {
-  new_thread->ret_val = NULL;
   new_thread->stack = malloc(THREAD_STACK_SIZE);
   assert(new_thread->stack);
-  new_thread->status = TS_READY;
   num_threads++;
 }
 
