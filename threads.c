@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #ifndef PREEMPT
@@ -131,10 +132,11 @@ void pthread_exit(void *value_ptr) {
    * - Update the thread's status to indicate that it has exited
    * What would you do after this?
    */
+  free(threads[current_thread].stack);
   threads[current_thread].ret_val = value_ptr;
   threads[current_thread].status = TS_EXITED;
   schedule(0);
-  exit(0);
+  exit(EXIT_SUCCESS);
 }
 
 pthread_t pthread_self(void) {
@@ -151,12 +153,14 @@ int pthread_join(pthread_t thread, void **retval) {
    * the retval passed by pthread_exit. You should clean up all information
    * related to the terminated thread that you did not on pthread_exit.
    */
-  if (threads[(long)thread].status != TS_EXITED)
+  int id = (long)thread;
+  if (threads[id].status != TS_EXITED)
     schedule(0);
 
-  free(threads[current_thread].stack);
-  threads[current_thread].stack = NULL;
-  *retval = threads[(long)thread].ret_val;
+  threads[id].stack = NULL;
+  memset(threads[id].registers, 0, sizeof(jmp_buf));
+  *retval = threads[id].ret_val;
+  threads[id].ret_val = NULL;
   num_threads--;
 
   return 0;
