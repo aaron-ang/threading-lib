@@ -52,7 +52,7 @@ void schedule(int signal) {
 
   int start_thread = current_thread;
   do
-    current_thread = (current_thread + 1) % num_threads;
+    current_thread = (current_thread + 1) % MAX_THREADS;
   while (threads[current_thread].status != TS_READY &&
          current_thread != start_thread);
 
@@ -115,6 +115,9 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
    * our case). The address to return to after finishing start_routine
    * should be the first thing you push on your stack.
    */
+  if (num_threads >= MAX_THREADS)
+    exit(EXIT_FAILURE);
+
   TCB *new_thread = get_new_thread();
   *thread = (pthread_t)new_thread->id;
 
@@ -134,7 +137,6 @@ void pthread_exit(void *value_ptr) {
    * - Update the thread's status to indicate that it has exited
    * What would you do after this?
    */
-  free(threads[current_thread].stack);
   threads[current_thread].ret_val = value_ptr;
   threads[current_thread].status = TS_EXITED;
   schedule(0);
@@ -151,16 +153,18 @@ pthread_t pthread_self(void) {
 
 int pthread_join(pthread_t thread, void **retval) {
   /* TODO: wait for the thread identified by the ID “thread” to terminate.
-   * If that thread has already terminated, then it returns immediately with the
-   * retval passed by pthread_exit. You should clean up all information related
-   * to the terminated thread that you did not on pthread_exit.
+   * If that thread has already terminated, then it returns immediately with
+   * the retval passed by pthread_exit. You should clean up all information
+   * related to the terminated thread that you did not on pthread_exit.
    */
-
-  // TS_BLOCKED state?
   if (threads[(long)thread].status != TS_EXITED)
     schedule(0);
 
+  free(threads[current_thread].stack);
+  threads[current_thread].stack = NULL;
   *retval = threads[(long)thread].ret_val;
+  num_threads--;
+
   return 0;
 }
 
@@ -175,8 +179,10 @@ void init_handler() {
 
 TCB *get_new_thread() {
   int i = 0;
-  while (threads[i].status != TS_EXITED)
-    i = (i + 1) % MAX_THREADS;
+  while (threads[i].status != TS_EXITED || threads[i].stack) {
+    if (++i >= MAX_THREADS)
+      exit(EXIT_FAILURE);
+  }
   threads[i].id = i;
   return &threads[i];
 }
