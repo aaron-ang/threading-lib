@@ -186,17 +186,16 @@ void thread_init(TCB *new_thread) {
   new_thread->ret_val = NULL;
   new_thread->stack = malloc(THREAD_STACK_SIZE);
   assert(new_thread->stack);
-  if (setjmp(new_thread->registers))
-    return;
   new_thread->status = TS_READY;
   num_threads++;
 }
 
 // Set up registers
 void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg) {
-  unsigned long pc = get_reg(&new_thread->registers, JBL_PC);
-  pc = _ptr_mangle((unsigned long)start_thunk);
-  set_reg(&new_thread->registers, JBL_PC, pc);
+  if (setjmp(new_thread->registers))
+    return;
+
+  set_reg(&new_thread->registers, JBL_PC, (unsigned long)start_thunk);
   set_reg(&new_thread->registers, JBL_R12, (unsigned long)start_routine);
   set_reg(&new_thread->registers, JBL_R13, (unsigned long)arg);
 
