@@ -50,15 +50,9 @@ void schedule(int signal) {
     threads[current_thread].status = TS_READY;
   }
 
-  int start_thread = current_thread;
   do
     current_thread = (current_thread + 1) % MAX_THREADS;
-  while (threads[current_thread].status != TS_READY &&
-         current_thread != start_thread);
-
-  if (current_thread == start_thread &&
-      threads[current_thread].status == TS_EXITED) // no more threads to run
-    return;
+  while (threads[current_thread].status != TS_READY);
 
   threads[current_thread].status = TS_RUNNING;
   longjmp(threads[current_thread].registers, threads[current_thread].id + 1);
