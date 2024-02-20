@@ -31,7 +31,9 @@ int main(int argc, char **argv) {
 
   void *pret;
   int ret;
-  /* Wait for second half of the threads to finish */
+  /* Wait for second half of the threads to finish.
+  At this point most likely more than half of the threads are zombies.
+  */
   for (int i = THREAD_CNT - 1; i >= THREAD_CNT / 2; i--) {
     pthread_join(threads[i], &pret);
     ret = *(int *)pret;

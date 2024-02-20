@@ -45,6 +45,7 @@ int main(int argc, char **argv) {
     void *pret;
     int ret;
     pthread_join(threads[i], &pret);
+    assert(pret);
     ret = *(int *)pret;
     assert(ret == i);
   }

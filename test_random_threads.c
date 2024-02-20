@@ -7,18 +7,14 @@
 /* How many threads (aside from main) to create */
 #define THREAD_CNT 64
 
-/* Each counter goes up to a multiple of this value. If your test is too fast
- * use a bigger number. Too slow? Use a smaller number. See the comment about
- * sleeping in count() to avoid this size-tuning issue.
- */
-#define COUNTER_FACTOR 10000
+#define LIMIT (1 << 20)
 
 // locations for return values
 int some_value[THREAD_CNT];
 
 void *count(void *arg) {
   int my_num = (long int)arg;
-  int c = (rand() % 100) * COUNTER_FACTOR;
+  int c = rand() % LIMIT;
   int i;
 
   for (i = 0; i < c; i++) {
@@ -48,6 +44,7 @@ int main(int argc, char **argv) {
     int ret;
 
     pthread_join(threads[i], &pret);
+    assert(pret);
     ret = *(int *)pret;
     assert(ret == some_value[i]);
   }
