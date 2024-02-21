@@ -28,50 +28,16 @@ TCB threads[MAX_THREADS];
 int current_thread = 0;
 int num_threads = 0;
 
-void init_handler();
+static void scheduler_init();
 
-TCB *get_new_thread();
+static void init_handler();
 
-void thread_init(TCB *new_thread);
+static TCB *get_new_thread();
 
-void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg);
+static void thread_init(TCB *new_thread);
 
-void schedule(int signal) {
-  if (threads[current_thread].status == TS_RUNNING) {
-    if (setjmp(threads[current_thread].registers))
-      return;
-    threads[current_thread].status = TS_READY;
-  }
-
-  do
-    current_thread = (current_thread + 1) % MAX_THREADS;
-  while (threads[current_thread].status != TS_READY);
-
-  threads[current_thread].status = TS_RUNNING;
-  longjmp(threads[current_thread].registers, threads[current_thread].id + 1);
-}
-
-static void scheduler_init() {
-  assert(num_threads == 0);
-
-  TCB *main_thread = get_new_thread();
-  thread_init(main_thread);
-
-  assert(num_threads == 1);
-  main_thread->status = TS_RUNNING;
-
-  if (PREEMPT)
-    init_handler();
-}
-
-void init_handler() {
-  struct sigaction sa = {
-      .sa_handler = schedule,
-      .sa_flags = SA_NODEFER,
-  };
-  sigaction(SIGALRM, &sa, NULL);
-  ualarm(QUANTUM, QUANTUM);
-}
+static void reg_init(TCB *new_thread, void *(*start_routine)(void *),
+                     void *arg);
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg) {
@@ -95,6 +61,28 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   return 0;
 }
 
+void scheduler_init() {
+  assert(num_threads == 0);
+
+  TCB *main_thread = get_new_thread();
+  thread_init(main_thread);
+
+  assert(num_threads == 1);
+  main_thread->status = TS_RUNNING;
+
+  if (PREEMPT)
+    init_handler();
+}
+
+void init_handler() {
+  struct sigaction sa = {
+      .sa_handler = schedule,
+      .sa_flags = SA_NODEFER,
+  };
+  sigaction(SIGALRM, &sa, NULL);
+  ualarm(QUANTUM, QUANTUM);
+}
+
 TCB *get_new_thread() {
   static int i = 0;
   int seen = 0;
@@ -107,14 +95,12 @@ TCB *get_new_thread() {
   return &threads[i];
 }
 
-// Initialize the thread
 void thread_init(TCB *new_thread) {
   new_thread->stack = malloc(THREAD_STACK_SIZE);
   assert(new_thread->stack);
   num_threads++;
 }
 
-// Set up registers
 void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg) {
   if (setjmp(new_thread->registers))
     return;
@@ -129,15 +115,6 @@ void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg) {
 }
 
 void pthread_exit(void *value_ptr) {
-  /* TODO: Exit the current thread instead of exiting the entire process.
-   * Hints:
-   * - Release all resources for the current thread. CAREFUL though.
-   *   If you free() the currently-in-use stack then do something like
-   *   call a function or add/remove variables from the stack, bad things
-   *   can happen.
-   * - Update the thread's status to indicate that it has exited
-   * What would you do after this?
-   */
   threads[current_thread].ret_val = value_ptr;
   threads[current_thread].status = TS_EXITED;
   schedule(0);
@@ -162,6 +139,21 @@ int pthread_join(pthread_t thread, void **retval) {
 
   num_threads--;
   return 0;
+}
+
+void schedule(int signal) {
+  if (threads[current_thread].status == TS_RUNNING) {
+    if (setjmp(threads[current_thread].registers))
+      return;
+    threads[current_thread].status = TS_READY;
+  }
+
+  do
+    current_thread = (current_thread + 1) % MAX_THREADS;
+  while (threads[current_thread].status != TS_READY);
+
+  threads[current_thread].status = TS_RUNNING;
+  longjmp(threads[current_thread].registers, threads[current_thread].id + 1);
 }
 
 /*
