@@ -148,10 +148,14 @@ void schedule(int signal) {
     threads[current_thread].status = TS_READY;
   }
 
-  do
-    current_thread = (current_thread + 1) % MAX_THREADS;
-  while (threads[current_thread].status != TS_READY);
+  int i = current_thread;
+  do {
+    i = (i + 1) % MAX_THREADS;
+    if (i == current_thread)
+      return;
+  } while (threads[i].status != TS_READY);
 
+  current_thread = i;
   threads[current_thread].status = TS_RUNNING;
   longjmp(threads[current_thread].registers, threads[current_thread].id + 1);
 }
