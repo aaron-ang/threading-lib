@@ -7,8 +7,9 @@ override CFLAGS := -Wall -Werror -std=gnu99 -O0 -g $(CFLAGS) -I.
 # Add any additional tests here
 test_files=./test_busy_threads ./test_many_threads \
 ./test_random_threads ./test_new_threads \
-./test_zombie_threads
-custom_tests= ./test_one_thread ./test_custom_schedule ./test_early_exit
+./test_zombie_threads ./test_wait_thread
+custom_tests= ./test_one_thread ./test_custom_schedule \
+./test_early_exit
 
 PREEMPT=1
 ifeq ($(PREEMPT),0)
@@ -39,6 +40,7 @@ test_many_threads.o: test_many_threads.c
 test_random_threads.o: test_random_threads.c
 test_new_threads.o: test_new_threads.c
 test_zombie_threads.o: test_zombie_threads.c
+test_wait_thread.o: test_wait_thread.c
 
 test_custom_schedule.o: test_custom_schedule.c
 test_one_thread.o: test_one_thread.c
@@ -49,6 +51,7 @@ test_many_threads: test_many_threads.o $(mythread)
 test_random_threads: test_random_threads.o $(mythread)
 test_new_threads: test_new_threads.o $(mythread)
 test_zombie_threads: test_zombie_threads.o $(mythread)
+test_wait_thread: test_wait_thread.o $(mythread)
 
 test_custom_schedule: test_custom_schedule.o $(mythread)
 test_one_thread: test_one_thread.o $(mythread)
