@@ -124,8 +124,10 @@ void pthread_exit(void *value_ptr) {
 pthread_t pthread_self(void) { return (pthread_t)threads[current_thread].id; }
 
 int pthread_join(pthread_t thread, void **retval) {
-  int id = (long)thread;
+  if (retval == NULL)
+    return -1;
 
+  int id = (long)thread;
   while (threads[id].status != TS_EXITED)
     schedule(0);
 
