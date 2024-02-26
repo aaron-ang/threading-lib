@@ -9,14 +9,14 @@ The sample code provided includes:
 
 Test cases added
 
-- [test_one_thread.c](test_one_thread.c): Tests the creation, execution, and cleanup of a single thread
-- [test_custom_schedule.c](test_custom_schedule.c): Tests the scheduling of a few threads
-- [test_early_exit.c](test_early_exit.c): Tests the handling of main thread exiting early
-- [test_many_threads.c](test_many_threads.c): Tests the handling of the maximum allowed number of threads
-- [test_random_threads.c](test_random_threads.c): Tests the handling of a few threads counting up to a random number
-- [test_new_threads.c](test_new_threads.c): Tests the cleanup of old threads and the creation of new threads
-- [test_zombie_threads.c](test_zombie_threads.c): Tests the handling of zombie threads (threads that have exited but have not been joined)
-- [test_wait_threads.c](test_wait_threads.c): Tests waiting for one busy thread to finish
+- [test_one_thread.c](tests/test_one_thread.c): Tests the creation, execution, and cleanup of a single thread
+- [test_custom_schedule.c](tests/test_custom_schedule.c): Tests the scheduling of a few threads
+- [test_early_exit.c](tests/test_early_exit.c): Tests the handling of main thread exiting early
+- [test_many_threads.c](tests/test_many_threads.c): Tests the handling of the maximum allowed number of threads
+- [test_random_threads.c](tests/test_random_threads.c): Tests the handling of a few threads counting up to a random number
+- [test_new_threads.c](tests/test_new_threads.c): Tests the cleanup of old threads and the creation of new threads
+- [test_zombie_threads.c](tests/test_zombie_threads.c): Tests the handling of zombie threads (threads that have exited but have not been joined)
+- [test_wait_thread.c](tests/test_wait_thread.c): Tests waiting for one busy thread to finish
 
 ## `threads.c`
 
