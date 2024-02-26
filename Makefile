@@ -4,12 +4,15 @@ override CFLAGS := -Wall -Werror -std=gnu99 -O0 -g $(CFLAGS) -I.
 #override CFLAGS :=  -fsanitize=undefined $(CFLAGS)
 #override LDFLAGS := -fsanitize=undefined -fsanitize=leak $(LDLAGS)
 
+TESTDIR=tests
+
 # Add any additional tests here
-test_files=./test_busy_threads ./test_many_threads \
-./test_random_threads ./test_new_threads \
-./test_zombie_threads ./test_wait_thread
-custom_tests= ./test_one_thread ./test_custom_schedule \
-./test_early_exit
+test_files=test_busy_threads test_many_threads \
+ test_random_threads test_new_threads \
+ test_zombie_threads test_wait_thread
+
+custom_tests= test_one_thread test_custom_schedule \
+ test_early_exit
 
 PREEMPT=1
 ifeq ($(PREEMPT),0)
@@ -35,27 +38,13 @@ endif
 CC = gcc
 
 # rules to build each of the tests
-test_busy_threads.o: test_busy_threads.c
-test_many_threads.o: test_many_threads.c
-test_random_threads.o: test_random_threads.c
-test_new_threads.o: test_new_threads.c
-test_zombie_threads.o: test_zombie_threads.c
-test_wait_thread.o: test_wait_thread.c
+test_files := $(addprefix $(TESTDIR)/,$(test_files))
+objects := $(addsuffix .o,$(test_files))
 
-test_custom_schedule.o: test_custom_schedule.c
-test_one_thread.o: test_one_thread.c
-test_early_exit.o: test_early_exit.c
+$(objects): %.o: %.c
 
-test_busy_threads: test_busy_threads.o $(mythread)
-test_many_threads: test_many_threads.o $(mythread)
-test_random_threads: test_random_threads.o $(mythread)
-test_new_threads: test_new_threads.o $(mythread)
-test_zombie_threads: test_zombie_threads.o $(mythread)
-test_wait_thread: test_wait_thread.o $(mythread)
+$(test_files): %: %.o $(mythread)
 
-test_custom_schedule: test_custom_schedule.o $(mythread)
-test_one_thread: test_one_thread.o $(mythread)
-test_early_exit: test_early_exit.o $(mythread)
 
 .PHONY: clean check checkprogs
 
@@ -67,4 +56,4 @@ check: checkprogs
 	/bin/bash run_tests.sh $(test_files)
 
 clean:
-	rm -f *.o $(test_files) $(test_o_files) *~
+	rm -f *.o *~ $(TESTDIR)/*.o $(test_files)
