@@ -1,4 +1,4 @@
-#include "ec440threads.h"
+#include "../ec440threads.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
