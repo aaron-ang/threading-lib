@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 #define THREAD_CNT 127
@@ -12,7 +13,7 @@
 
 pthread_mutex_t mutex;
 atomic_bool start;
-atomic_bool done;
+time_t end_time;
 
 struct thread_info {
   pthread_t tid;
@@ -26,14 +27,14 @@ static void *thread_func(void *arg) {
   while (!start) {
   }; /* Wait until parent flags that all threads have been created */
 
-  while (!done) {
+  while (time(NULL) < end_time) {
     pthread_mutex_lock(&mutex);
     i++;
     pthread_mutex_unlock(&mutex);
   }
 
   my_info->iters_done = i;
-  return (void *)0;
+  return NULL;
 }
 
 int main() {
@@ -41,7 +42,7 @@ int main() {
   int i;
 
   start = false;
-  done = false;
+  end_time = time(NULL) + DURATION;
   assert(pthread_mutex_init(&mutex, NULL) == 0);
 
   printf(
@@ -57,8 +58,6 @@ int main() {
 
   /* All threads created. Let them run concurrently for requested duration. */
   start = true;
-  sleep(DURATION);
-  done = true;
 
   /* Wait for child threads to finish */
   for (i = 0; i < THREAD_CNT; i++) {

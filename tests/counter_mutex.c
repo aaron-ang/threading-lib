@@ -15,8 +15,7 @@ static void *increment_thread(void *arg) {
     shared_counter++;
     pthread_mutex_unlock(&mutex);
   }
-
-  return (void *)0;
+  return NULL;
 }
 
 static void *decrement_thread(void *arg) {
@@ -26,8 +25,7 @@ static void *decrement_thread(void *arg) {
     shared_counter--;
     pthread_mutex_unlock(&mutex);
   }
-
-  return (void *)0;
+  return NULL;
 }
 
 int main() {

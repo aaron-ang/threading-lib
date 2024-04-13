@@ -38,8 +38,7 @@ int main() {
     pthread_create(&threads[i], NULL, increment, (void *)i);
   }
   for (i = 0; i < THREAD_CNT; i++) {
-    void *pret;
-    pthread_join(threads[i], &pret);
+    pthread_join(threads[i], NULL);
   }
 
   pthread_mutex_destroy(&my_int.mutex);
