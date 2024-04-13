@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <pthread.h>
-#include <stdio.h>
 
 /* How many threads (aside from main) to create */
 #define THREAD_CNT 127
@@ -8,7 +7,7 @@
 #define COUNTER_FACTOR 10000
 
 struct protected_int {
-  int val;
+  volatile int val;
   pthread_mutex_t mutex;
 };
 
@@ -23,10 +22,6 @@ void *increment(void *arg) {
   my_int.val = 0;
   for (i = 0; i < c; i++) {
     assert(my_int.val == i);
-    if ((i % 10000) == 0) {
-      printf("id: 0x%lx num %d counted to %d of %d\n", pthread_self(), my_num,
-             i, c);
-    }
     my_int.val++;
   }
   pthread_mutex_unlock(&my_int.mutex);
