@@ -9,7 +9,8 @@ TESTDIR=tests
 # Add any additional tests here
 test_files=test_busy_threads test_many_threads \
  test_random_threads test_new_threads \
- test_zombie_threads test_wait_thread
+ test_zombie_threads test_wait_thread \
+ test_sync
 
 custom_tests= test_one_thread test_custom_schedule \
  test_early_exit
