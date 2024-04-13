@@ -53,7 +53,7 @@ int main() {
 
   /* We create the requested number of threads, all doing the same work */
   for (i = 0; i < THREAD_CNT; i++) {
-    (void)pthread_create(&tinfo[i].tid, NULL, thread_func, (void *)&tinfo[i]);
+    pthread_create(&tinfo[i].tid, NULL, thread_func, (void *)&tinfo[i]);
   }
 
   /* Wait for child threads to finish */
@@ -75,7 +75,8 @@ int main() {
     if (tinfo[i].iters_done > max_iters) {
       max_iters = tinfo[i].iters_done;
     }
-    printf("Thread %d completed %u iters\n", i, tinfo[i].iters_done);
+    printf("Thread %ld completed %u iters\n", (long)tinfo[i].tid,
+           tinfo[i].iters_done);
   }
 
   unsigned diff = max_iters - min_iters;
