@@ -3,10 +3,13 @@
 #include <stdlib.h>
 
 #define THREAD_CNT 126
-#define NUM_ITERS 1000000
+#define NUM_ITERS 100000
 
 pthread_mutex_t mutex;
 volatile long shared_counter;
+
+// locations for return values
+int some_value[THREAD_CNT];
 
 static void *increment_thread(void *arg) {
   long niters = (long)arg;
@@ -15,8 +18,9 @@ static void *increment_thread(void *arg) {
     shared_counter++;
     pthread_mutex_unlock(&mutex);
   }
-  pthread_exit(arg);
-  return NULL;
+  long tid = (long)pthread_self() % THREAD_CNT;
+  some_value[tid] = niters;
+  pthread_exit(&some_value[tid]);
 }
 
 static void *decrement_thread(void *arg) {
@@ -26,8 +30,9 @@ static void *decrement_thread(void *arg) {
     shared_counter--;
     pthread_mutex_unlock(&mutex);
   }
-  pthread_exit(arg);
-  return NULL;
+  long tid = (long)pthread_self() % THREAD_CNT;
+  some_value[tid] = niters;
+  pthread_exit(&some_value[tid]);
 }
 
 int main() {

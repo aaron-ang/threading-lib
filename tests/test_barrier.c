@@ -33,7 +33,6 @@ static void *thread_func(void *arg) {
 
   my_info->iters_done = i;
   pthread_exit(arg);
-  return NULL;
 }
 
 int main() {
@@ -56,28 +55,25 @@ int main() {
     pthread_create(&tinfo[i].tid, NULL, thread_func, (void *)&tinfo[i]);
   }
 
-  /* Wait for child threads to finish */
-  for (i = 0; i < THREAD_CNT; i++) {
-    pthread_join(tinfo[i].tid, &pret);
-  }
-
-  assert(pthread_mutex_destroy(&mutex) == 0);
-  assert(pthread_barrier_destroy(&barrier) == 0);
-
   unsigned min_iters = UINT_MAX;
   unsigned max_iters = 0;
   unsigned tot_iters = 0;
   for (i = 0; i < THREAD_CNT; i++) {
-    tot_iters += tinfo[i].iters_done;
-    if (tinfo[i].iters_done < min_iters) {
-      min_iters = tinfo[i].iters_done;
+    pthread_join(tinfo[i].tid, &pret);
+    struct thread_info *my_info = (struct thread_info *)pret;
+    tot_iters += my_info->iters_done;
+    if (my_info->iters_done < min_iters) {
+      min_iters = my_info->iters_done;
     }
-    if (tinfo[i].iters_done > max_iters) {
-      max_iters = tinfo[i].iters_done;
+    if (my_info->iters_done > max_iters) {
+      max_iters = my_info->iters_done;
     }
-    printf("Thread %ld completed %u iters\n", (long)tinfo[i].tid,
-           tinfo[i].iters_done);
+    printf("Thread %ld completed %u iters\n", (long)my_info->tid,
+           my_info->iters_done);
   }
+
+  assert(pthread_mutex_destroy(&mutex) == 0);
+  assert(pthread_barrier_destroy(&barrier) == 0);
 
   unsigned diff = max_iters - min_iters;
   printf("\nTOTAL: %u iterations completed.\n", tot_iters);
