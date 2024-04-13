@@ -165,14 +165,12 @@ void schedule(int signal) {
 
 void add_thread_to_waitlist(int thread_index, int *waitlist) {
   assert(waitlist);
-  for (int i = 0; waitlist[i]; i++) {
+  int i = 0;
+  for (; waitlist[i]; i++) {
     if (waitlist[i] == thread_index)
       return;
-    if (waitlist[i] == 0) {
-      waitlist[i] = thread_index;
-      return;
-    }
   }
+  waitlist[i] = thread_index;
 }
 
 void clear_waitlist(int *waitlist) {
