@@ -2,7 +2,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#define THREAD_CNT 127
+#define THREAD_CNT 126
 #define NUM_ITERS 1000000
 
 pthread_mutex_t mutex;

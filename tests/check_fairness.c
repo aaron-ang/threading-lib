@@ -56,11 +56,9 @@ int main() {
     (void)pthread_create(&tinfo[i].tid, NULL, thread_func, (void *)&tinfo[i]);
   }
 
-  /* All threads created. Let them run concurrently for requested duration. */
-  start = true;
-
   /* Wait for child threads to finish */
   for (i = 0; i < THREAD_CNT; i++) {
+    start = true;
     pthread_join(tinfo[i].tid, NULL);
   }
 
