@@ -114,10 +114,18 @@ void init_handler() {
   ualarm(QUANTUM, QUANTUM);
 }
 
-void lock() { assert(sigprocmask(SIG_BLOCK, &(sigset_t){SIGALRM}, NULL) == 0); }
+void lock() {
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGALRM);
+  assert(sigprocmask(SIG_BLOCK, &mask, NULL) == 0);
+}
 
 void unlock() {
-  assert(sigprocmask(SIG_UNBLOCK, &(sigset_t){SIGALRM}, NULL) == 0);
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGALRM);
+  assert(sigprocmask(SIG_UNBLOCK, &mask, NULL) == 0);
 }
 
 int test_and_set(int *lock) {
