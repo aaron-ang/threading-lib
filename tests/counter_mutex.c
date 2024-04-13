@@ -12,46 +12,42 @@ volatile long shared_counter;
 int some_value[THREAD_CNT];
 
 static void *increment_thread(void *arg) {
-  long niters = (long)arg;
-  for (int i = 0; i < niters; i++) {
+  int my_num = (long)arg;
+  for (int i = 0; i < NUM_ITERS; i++) {
     pthread_mutex_lock(&mutex);
     shared_counter++;
     pthread_mutex_unlock(&mutex);
   }
-  long tid = (long)pthread_self() % THREAD_CNT;
-  some_value[tid] = niters;
-  pthread_exit(&some_value[tid]);
+  some_value[my_num] = NUM_ITERS;
+  pthread_exit(&some_value[my_num]);
 }
 
 static void *decrement_thread(void *arg) {
-  long niters = (long)arg;
-  for (int i = 0; i < niters; i++) {
+  int my_num = (long)arg;
+  for (int i = 0; i < NUM_ITERS; i++) {
     pthread_mutex_lock(&mutex);
     shared_counter--;
     pthread_mutex_unlock(&mutex);
   }
-  long tid = (long)pthread_self() % THREAD_CNT;
-  some_value[tid] = niters;
-  pthread_exit(&some_value[tid]);
+  some_value[my_num] = NUM_ITERS;
+  pthread_exit(&some_value[my_num]);
 }
 
 int main() {
   pthread_t *tids;
-  int i;
+  long i;
   void *pret;
 
   shared_counter = 0;
-  tids = (pthread_t *)malloc(THREAD_CNT * sizeof(pthread_t));
+  tids = malloc(THREAD_CNT * sizeof(pthread_t));
   assert(pthread_mutex_init(&mutex, NULL) == 0);
 
   for (i = 0; i < THREAD_CNT; i += 2) {
-    (void)pthread_create(&tids[i], NULL, increment_thread, (void *)NUM_ITERS);
-    (void)pthread_create(&tids[i + 1], NULL, decrement_thread,
-                         (void *)NUM_ITERS);
+    pthread_create(&tids[i], NULL, increment_thread, (void *)i);
+    pthread_create(&tids[i + 1], NULL, decrement_thread, (void *)i);
   }
-  for (i = 0; i < THREAD_CNT; i += 2) {
+  for (i = 0; i < THREAD_CNT; i += 1) {
     pthread_join(tids[i], &pret);
-    pthread_join(tids[i + 1], &pret);
   }
 
   assert(pthread_mutex_destroy(&mutex) == 0);

@@ -166,9 +166,11 @@ void schedule(int signal) {
 void add_thread_to_waitlist(int thread_index, int *waitlist) {
   assert(waitlist);
   int i = 0;
-  for (; waitlist[i]; i++) {
+  for (; i < MAX_THREADS; i++) {
     if (waitlist[i] == thread_index)
       return;
+    if (waitlist[i] == 0)
+      break;
   }
   waitlist[i] = thread_index;
 }
@@ -176,7 +178,9 @@ void add_thread_to_waitlist(int thread_index, int *waitlist) {
 void clear_waitlist(int *waitlist) {
   if (waitlist == NULL)
     return;
-  for (int i = 0; waitlist[i]; i++) {
+  for (int i = 0; i < MAX_THREADS; i++) {
+    if (waitlist[i] == 0)
+      break;
     threads[waitlist[i]].status = TS_READY;
     waitlist[i] = 0;
   }
@@ -247,7 +251,6 @@ int pthread_mutex_init(pthread_mutex_t *mutex,
 int pthread_mutex_destroy(pthread_mutex_t *mutex) {
   my_mutex_t *m = (my_mutex_t *)mutex;
   m->my_mutex.flag = 0;
-  clear_waitlist(m->my_mutex.waitlist);
   free(m->my_mutex.waitlist);
   m->my_mutex.waitlist = NULL;
   return 0;
