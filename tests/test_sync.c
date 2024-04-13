@@ -7,7 +7,7 @@
 #define COUNTER_FACTOR 10000
 
 struct protected_int {
-  volatile int val;
+  int val;
   pthread_mutex_t mutex;
 };
 
@@ -32,16 +32,17 @@ void *increment(void *arg) {
 int main() {
   pthread_t threads[THREAD_CNT];
   unsigned long int i;
+  void *pret;
 
-  pthread_mutex_init(&my_int.mutex, NULL);
+  assert(pthread_mutex_init(&my_int.mutex, NULL) == 0);
 
   for (i = 0; i < THREAD_CNT; i++) {
     pthread_create(&threads[i], NULL, increment, (void *)i);
   }
   for (i = 0; i < THREAD_CNT; i++) {
-    pthread_join(threads[i], NULL);
+    pthread_join(threads[i], &pret);
   }
 
-  pthread_mutex_destroy(&my_int.mutex);
+  assert(pthread_mutex_destroy(&my_int.mutex) == 0);
   return 0;
 }

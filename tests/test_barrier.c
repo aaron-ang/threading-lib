@@ -39,6 +39,7 @@ static void *thread_func(void *arg) {
 int main() {
   struct thread_info *tinfo;
   int i;
+  void *pret;
 
   end_time = time(NULL) + DURATION;
   assert(pthread_mutex_init(&mutex, NULL) == 0);
@@ -57,7 +58,7 @@ int main() {
 
   /* Wait for child threads to finish */
   for (i = 0; i < THREAD_CNT; i++) {
-    pthread_join(tinfo[i].tid, NULL);
+    pthread_join(tinfo[i].tid, &pret);
   }
 
   assert(pthread_mutex_destroy(&mutex) == 0);
