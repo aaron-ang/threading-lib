@@ -128,9 +128,9 @@ void unlock() {
   assert(sigprocmask(SIG_UNBLOCK, &mask, NULL) == 0);
 }
 
-int test_and_set(int *lock) {
-  int ret = *lock;
-  *lock = 1;
+int test_and_set(int *flag) {
+  int ret = *flag;
+  *flag = 1;
   return ret;
 }
 

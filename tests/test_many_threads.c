@@ -27,9 +27,7 @@ void *count(void *arg) {
     }
   }
   some_value[my_num] = my_num;
-
   pthread_exit(&some_value[my_num]);
-  return NULL;
 }
 
 int main(int argc, char **argv) {
