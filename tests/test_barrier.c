@@ -32,6 +32,7 @@ static void *thread_func(void *arg) {
   }
 
   my_info->iters_done = i;
+  pthread_exit(arg);
   return NULL;
 }
 

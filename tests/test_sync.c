@@ -25,6 +25,7 @@ void *increment(void *arg) {
     my_int.val++;
   }
   pthread_mutex_unlock(&my_int.mutex);
+  pthread_exit(arg);
   return NULL;
 }
 
