@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <limits.h>
 #include <pthread.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +11,7 @@
 #define DURATION 3
 
 pthread_mutex_t mutex;
-atomic_bool start;
+pthread_barrier_t barrier;
 time_t end_time;
 
 struct thread_info {
@@ -24,8 +23,7 @@ static void *thread_func(void *arg) {
   struct thread_info *my_info = (struct thread_info *)arg;
   unsigned i = 0;
 
-  while (!start) {
-  }; /* Wait until parent flags that all threads have been created */
+  pthread_barrier_wait(&barrier); // Wait for all threads to be created
 
   while (time(NULL) < end_time) {
     pthread_mutex_lock(&mutex);
@@ -41,9 +39,9 @@ int main() {
   struct thread_info *tinfo;
   int i;
 
-  start = false;
   end_time = time(NULL) + DURATION;
   assert(pthread_mutex_init(&mutex, NULL) == 0);
+  assert(pthread_barrier_init(&barrier, NULL, THREAD_CNT) == 0);
 
   printf(
       "Main thread: Beginning test with %d threads, running for %d seconds\n",
@@ -58,11 +56,11 @@ int main() {
 
   /* Wait for child threads to finish */
   for (i = 0; i < THREAD_CNT; i++) {
-    start = true;
     pthread_join(tinfo[i].tid, NULL);
   }
 
   assert(pthread_mutex_destroy(&mutex) == 0);
+  assert(pthread_barrier_destroy(&barrier) == 0);
 
   unsigned min_iters = UINT_MAX;
   unsigned max_iters = 0;
@@ -86,5 +84,6 @@ int main() {
          max_iters, min_iters);
   printf("Difference is %u iters\n", diff);
 
+  free(tinfo);
   return 0;
 }
