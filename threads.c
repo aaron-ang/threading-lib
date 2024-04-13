@@ -15,17 +15,14 @@
 #define THREAD_STACK_SIZE (1 << 15) /* size of stack in bytes */
 #define QUANTUM (50 * 1000)         /* quantum in usec */
 
-#ifndef PTHREAD_BARRIER_SERIAL_THREAD
-#define PTHREAD_BARRIER_SERIAL_THREAD 1
-#endif
-
 typedef struct {
   int flag;
-} lock_t;
+  int *waitlist;
+} mutex_t;
 
 typedef union {
   pthread_mutex_t mutex;
-  lock_t my_mutex;
+  mutex_t my_mutex;
 } my_mutex_t;
 
 typedef struct {
@@ -41,7 +38,7 @@ typedef union {
   barrier_t my_barrier;
 } my_barrier_t;
 
-enum thread_status { TS_EXITED, TS_RUNNING, TS_READY };
+enum thread_status { TS_EXITED, TS_BLOCKED, TS_RUNNING, TS_READY };
 
 typedef struct thread_control_block {
   pthread_t id;
@@ -69,6 +66,10 @@ static void thread_init(TCB *new_thread);
 
 static void reg_init(TCB *new_thread, void *(*start_routine)(void *),
                      void *arg);
+
+static void add_thread_to_waitlist(int thread_index, int *waitlist);
+
+static void clear_waitlist(int *waitlist);
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg) {
@@ -221,22 +222,56 @@ int pthread_mutex_init(pthread_mutex_t *mutex,
   return 0;
 }
 
-int pthread_mutex_destroy(pthread_mutex_t *mutex) { return 0; }
+int pthread_mutex_destroy(pthread_mutex_t *mutex) {
+  my_mutex_t *m = (my_mutex_t *)mutex;
+  m->my_mutex.flag = 0;
+  free(m->my_mutex.waitlist);
+  return 0;
+}
+
+void add_thread_to_waitlist(int thread_index, int *waitlist) {
+  if (waitlist == NULL) {
+    waitlist = calloc(MAX_THREADS, sizeof(int));
+  }
+  for (int i = 0; waitlist[i]; i++) {
+    if (waitlist[i] == thread_index)
+      return;
+    if (waitlist[i] == 0) {
+      waitlist[i] = thread_index;
+      return;
+    }
+  }
+}
 
 int pthread_mutex_lock(pthread_mutex_t *mutex) {
   lock();
   my_mutex_t *m = (my_mutex_t *)mutex;
   while (test_and_set(&m->my_mutex.flag)) {
+    threads[current_thread].status = TS_BLOCKED;
+    add_thread_to_waitlist(current_thread, m->my_mutex.waitlist);
+    unlock();
     schedule(0);
   }
-  m->my_mutex.flag = 1;
+  assert(m->my_mutex.flag == 1);
   unlock();
   return 0;
 }
 
+void clear_waitlist(int *waitlist) {
+  if (waitlist == NULL)
+    return;
+  for (int i = 0; waitlist[i]; i++) {
+    threads[waitlist[i]].status = TS_READY;
+    waitlist[i] = 0;
+  }
+}
+
 int pthread_mutex_unlock(pthread_mutex_t *mutex) {
+  lock();
   my_mutex_t *m = (my_mutex_t *)mutex;
   m->my_mutex.flag = 0;
+  clear_waitlist(m->my_mutex.waitlist);
+  unlock();
   return 0;
 }
 
