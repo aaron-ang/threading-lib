@@ -13,6 +13,9 @@ struct protected_int {
 
 struct protected_int my_int;
 
+// locations for return values
+int some_value[THREAD_CNT];
+
 void *increment(void *arg) {
   int my_num = (long int)arg;
   int c = (my_num + 1) * COUNTER_FACTOR;
@@ -25,8 +28,8 @@ void *increment(void *arg) {
     my_int.val++;
   }
   pthread_mutex_unlock(&my_int.mutex);
-  pthread_exit(arg);
-  return NULL;
+  some_value[my_num] = my_num;
+  pthread_exit(&some_value[my_num]);
 }
 
 int main() {
