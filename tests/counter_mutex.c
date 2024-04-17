@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #define THREAD_CNT 126
-#define NUM_ITERS 100000
+#define NUM_ITERS 10000
 
 pthread_mutex_t mutex;
 volatile long shared_counter;

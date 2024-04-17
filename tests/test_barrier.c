@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #define THREAD_CNT 127
-#define DURATION 3
+#define DURATION 4
 
 pthread_mutex_t mutex;
 pthread_barrier_t barrier;
