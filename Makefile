@@ -13,7 +13,7 @@ test_files=test_busy_threads test_many_threads \
  test_sync counter_mutex test_barrier
 
 custom_tests= test_one_thread test_custom_schedule \
- test_early_exit
+ test_early_exit counter_mutex test_barrier
 
 PREEMPT=1
 ifeq ($(PREEMPT),0)

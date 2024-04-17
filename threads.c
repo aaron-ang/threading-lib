@@ -20,6 +20,9 @@ typedef struct {
   int *waitlist;
 } mutex_t;
 
+// usr/include/x86_64-linux-gnu/bits: struct_mutex.h, pthreadtypes.h,
+// pthreadtypes-arch.h
+
 typedef union {
   pthread_mutex_t mutex;
   mutex_t my_mutex;
@@ -104,12 +107,6 @@ void unlock() {
   sigemptyset(&mask);
   sigaddset(&mask, SIGALRM);
   assert(sigprocmask(SIG_UNBLOCK, &mask, NULL) == 0);
-}
-
-int test_and_set(int *flag) {
-  int ret = *flag;
-  *flag = 1;
-  return ret;
 }
 
 TCB *get_new_thread() {
@@ -259,14 +256,14 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex) {
 int pthread_mutex_lock(pthread_mutex_t *mutex) {
   lock();
   my_mutex_t *m = (my_mutex_t *)mutex;
-  while (test_and_set(&m->my_mutex.flag)) {
+  while (m->my_mutex.flag) {
     threads[current_thread].status = TS_BLOCKED;
     add_thread_to_waitlist(current_thread, m->my_mutex.waitlist);
     unlock();
     schedule(0);
     lock();
   }
-  assert(m->my_mutex.flag == 1);
+  m->my_mutex.flag = 1;
   unlock();
   return 0;
 }
