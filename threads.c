@@ -40,7 +40,7 @@ typedef union {
   barrier_t my_barrier;
 } my_barrier_t;
 
-enum thread_status { TS_EXITED, TS_BLOCKED, TS_RUNNING, TS_READY };
+enum thread_status { TS_EXITED, TS_READY, TS_RUNNING, TS_BLOCKED };
 
 typedef struct thread_control_block {
   pthread_t id;
@@ -141,11 +141,12 @@ void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg) {
 }
 
 void schedule(int signal) {
-  if (threads[current_thread].status == TS_RUNNING) {
+  if (threads[current_thread].status != TS_EXITED) {
     if (setjmp(threads[current_thread].registers))
       return;
-    threads[current_thread].status = TS_READY;
   }
+  if (threads[current_thread].status == TS_RUNNING)
+    threads[current_thread].status = TS_READY;
 
   int i = current_thread;
   do {
