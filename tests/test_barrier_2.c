@@ -31,6 +31,7 @@ int main() {
   int thread_ids[NUM_THREADS];
   pthread_t hellothread;
   int hello;
+  void *pret;
 
   // Initialize the barrier
   pthread_barrier_init(&barrier, NULL, NUM_THREADS);
@@ -44,9 +45,9 @@ int main() {
 
   // Wait for all threads to finish
   for (int i = 0; i < NUM_THREADS; i++) {
-    pthread_join(threads[i], NULL);
+    pthread_join(threads[i], &pret);
   }
-  pthread_join(hellothread, NULL);
+  pthread_join(hellothread, &pret);
 
   // Destroy the barrier
   pthread_barrier_destroy(&barrier);
