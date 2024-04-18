@@ -283,7 +283,7 @@ int pthread_barrier_init(pthread_barrier_t *restrict barrier,
   my_barrier_t *b = (my_barrier_t *)barrier;
   b->my_barrier.limit = count;
   b->my_barrier.count = 0;
-  b->my_barrier.waitlist = calloc(count, sizeof(int));
+  b->my_barrier.waitlist = calloc(MAX_THREADS, sizeof(int));
   assert(b->my_barrier.waitlist);
   for (int i = 0; i < MAX_THREADS; i++)
     b->my_barrier.waitlist[i] = -1;
