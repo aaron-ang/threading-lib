@@ -17,7 +17,6 @@
 
 typedef struct {
   int flag;
-  int *waitlist;
 } mutex_t;
 
 // usr/include/x86_64-linux-gnu/bits: struct_mutex.h, pthreadtypes.h,
@@ -47,6 +46,7 @@ typedef struct thread_control_block {
   void *stack;
   enum thread_status status;
   void *ret_val;
+  bool has_mutex;
 } TCB;
 
 TCB threads[MAX_THREADS];
@@ -123,6 +123,7 @@ TCB *get_new_thread() {
 void thread_init(TCB *new_thread) {
   new_thread->stack = malloc(THREAD_STACK_SIZE);
   assert(new_thread->stack);
+  new_thread->has_mutex = false;
   num_threads++;
 }
 
@@ -140,6 +141,8 @@ void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg) {
 }
 
 void schedule(int signal) {
+  if (threads[current_thread].has_mutex)
+    return;
   if (threads[current_thread].status != TS_EXITED) {
     if (setjmp(threads[current_thread].registers))
       return;
@@ -224,7 +227,6 @@ int pthread_join(pthread_t thread, void **retval) {
     schedule(0);
 
   *retval = threads[id].ret_val;
-  assert(*retval);
 
   memset(threads[id].registers, 0, sizeof(jmp_buf));
   free(threads[id].stack);
@@ -239,18 +241,12 @@ int pthread_mutex_init(pthread_mutex_t *mutex,
                        const pthread_mutexattr_t *attr) {
   my_mutex_t *m = (my_mutex_t *)mutex;
   m->my_mutex.flag = 0;
-  m->my_mutex.waitlist = calloc(MAX_THREADS, sizeof(int));
-  assert(m->my_mutex.waitlist);
-  for (int i = 0; i < MAX_THREADS; i++)
-    m->my_mutex.waitlist[i] = -1;
   return 0;
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mutex) {
   my_mutex_t *m = (my_mutex_t *)mutex;
   m->my_mutex.flag = 0;
-  free(m->my_mutex.waitlist);
-  m->my_mutex.waitlist = NULL;
   return 0;
 }
 
@@ -258,13 +254,12 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) {
   lock();
   my_mutex_t *m = (my_mutex_t *)mutex;
   while (m->my_mutex.flag) {
-    threads[current_thread].status = TS_BLOCKED;
-    add_thread_to_waitlist(current_thread, m->my_mutex.waitlist);
     unlock();
     schedule(0);
     lock();
   }
   m->my_mutex.flag = 1;
+  threads[current_thread].has_mutex = true;
   unlock();
   return 0;
 }
@@ -273,14 +268,16 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex) {
   lock();
   my_mutex_t *m = (my_mutex_t *)mutex;
   m->my_mutex.flag = 0;
-  clear_waitlist(m->my_mutex.waitlist);
+  threads[current_thread].has_mutex = false;
   unlock();
   return 0;
 }
 
 int pthread_barrier_init(pthread_barrier_t *restrict barrier,
                          const pthread_barrierattr_t *attr, unsigned count) {
+  lock();
   if (count == 0) {
+    unlock();
     return EINVAL;
   }
   my_barrier_t *b = (my_barrier_t *)barrier;
@@ -290,14 +287,17 @@ int pthread_barrier_init(pthread_barrier_t *restrict barrier,
   assert(b->my_barrier.waitlist);
   for (int i = 0; i < MAX_THREADS; i++)
     b->my_barrier.waitlist[i] = -1;
+  unlock();
   return 0;
 }
 
 int pthread_barrier_destroy(pthread_barrier_t *barrier) {
+  lock();
   my_barrier_t *b = (my_barrier_t *)barrier;
   clear_waitlist(b->my_barrier.waitlist);
   free(b->my_barrier.waitlist);
   memset(&b->my_barrier, 0, sizeof(my_barrier_t));
+  unlock();
   return 0;
 }
 
