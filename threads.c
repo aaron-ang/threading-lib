@@ -163,24 +163,23 @@ void schedule(int signal) {
 
 void add_thread_to_waitlist(int thread_index, int *waitlist) {
   assert(waitlist);
-  int i = 0;
-  for (; i < MAX_THREADS; i++) {
+  for (int i = 0; i < MAX_THREADS; i++) {
     if (waitlist[i] == thread_index)
       return;
-    if (waitlist[i] == 0)
-      break;
+    if (waitlist[i] == -1) {
+      waitlist[i] = thread_index;
+      return;
+    }
   }
-  waitlist[i] = thread_index;
 }
 
 void clear_waitlist(int *waitlist) {
-  if (waitlist == NULL)
-    return;
+  assert(waitlist);
   for (int i = 0; i < MAX_THREADS; i++) {
-    if (waitlist[i] == 0)
-      break;
+    if (waitlist[i] == -1)
+      return;
     threads[waitlist[i]].status = TS_READY;
-    waitlist[i] = 0;
+    waitlist[i] = -1;
   }
 }
 
@@ -243,6 +242,8 @@ int pthread_mutex_init(pthread_mutex_t *mutex,
   m->my_mutex.flag = 0;
   m->my_mutex.waitlist = calloc(MAX_THREADS, sizeof(int));
   assert(m->my_mutex.waitlist);
+  for (int i = 0; i < MAX_THREADS; i++)
+    m->my_mutex.waitlist[i] = -1;
   return 0;
 }
 
@@ -284,11 +285,13 @@ int pthread_barrier_init(pthread_barrier_t *restrict barrier,
     return EINVAL;
   }
   my_barrier_t *b = (my_barrier_t *)barrier;
-  b->my_barrier.waitlist = calloc(count, sizeof(int));
-  assert(b->my_barrier.waitlist);
   b->my_barrier.limit = count;
   b->my_barrier.count = 0;
   b->my_barrier.phase = 0;
+  b->my_barrier.waitlist = calloc(count, sizeof(int));
+  assert(b->my_barrier.waitlist);
+  for (int i = 0; i < MAX_THREADS; i++)
+    b->my_barrier.waitlist[i] = -1;
   return 0;
 }
 
