@@ -32,7 +32,6 @@ typedef struct {
   int *waitlist;
   unsigned limit;
   unsigned count;
-  unsigned phase;
 } barrier_t;
 
 typedef union {
@@ -287,7 +286,6 @@ int pthread_barrier_init(pthread_barrier_t *restrict barrier,
   my_barrier_t *b = (my_barrier_t *)barrier;
   b->my_barrier.limit = count;
   b->my_barrier.count = 0;
-  b->my_barrier.phase = 0;
   b->my_barrier.waitlist = calloc(count, sizeof(int));
   assert(b->my_barrier.waitlist);
   for (int i = 0; i < MAX_THREADS; i++)
@@ -309,20 +307,14 @@ int pthread_barrier_wait(pthread_barrier_t *barrier) {
   b->my_barrier.count++;
   if (b->my_barrier.count >= b->my_barrier.limit) {
     b->my_barrier.count = 0;
-    b->my_barrier.phase++;
     clear_waitlist(b->my_barrier.waitlist);
     unlock();
     return PTHREAD_BARRIER_SERIAL_THREAD;
   } else {
-    unsigned phase = b->my_barrier.phase;
-    do {
-      threads[current_thread].status = TS_BLOCKED;
-      add_thread_to_waitlist(current_thread, b->my_barrier.waitlist);
-      unlock();
-      schedule(0);
-      lock();
-    } while (phase == b->my_barrier.phase);
+    threads[current_thread].status = TS_BLOCKED;
+    add_thread_to_waitlist(current_thread, b->my_barrier.waitlist);
     unlock();
+    schedule(0);
     return 0;
   }
 }
