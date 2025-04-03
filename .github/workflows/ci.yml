@@ -1,0 +1,43 @@
+name: Threading Library CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc make
+
+      - name: Build threading library
+        run: make threads.o
+
+      - name: Build test programs
+        run: make checkprogs
+
+      - name: Run tests with preemption
+        run: |
+          echo "Running tests with PREEMPT=1"
+          make check
+
+      - name: Run tests without preemption
+        run: |
+          echo "Running tests with PREEMPT=0"
+          make clean
+          make PREEMPT=0 check
+
+      - name: Compare with system pthreads
+        run: |
+          echo "Testing against system pthreads"
+          make clean
+          make TSTMYPTHREADS=0 check
