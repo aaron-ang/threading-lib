@@ -9,25 +9,24 @@ int counter = 0;
 int ii = 0;
 
 void *thread_function(void *arg) {
+  long thread_id = (long)arg;
   pthread_mutex_lock(&mutex);
-  printf("Thread %d: ii value: %d\n", *((int *)arg), ii);
+  printf("Thread %ld: ii value: %d\n", thread_id, ii);
   ii++;
-  sleep(1);
+  usleep(100000);
   counter = counter + ii;
-  printf("Thread %d: Counter value: %d\n", *((int *)arg), counter);
+  printf("Thread %ld: Counter value: %d\n", thread_id, counter);
   pthread_mutex_unlock(&mutex);
   pthread_exit(NULL);
 }
 
 int main() {
   pthread_t threads[THREADS];
-  int thread_ids[THREADS];
 
   pthread_mutex_init(&mutex, NULL);
 
   for (int i = 0; i < THREADS; i++) {
-    thread_ids[i] = i + 1;
-    pthread_create(&threads[i], NULL, thread_function, &thread_ids[i]);
+    pthread_create(&threads[i], NULL, thread_function, (void*)(long)(i + 1));
   }
 
   for (int i = 0; i < THREADS; i++) {
