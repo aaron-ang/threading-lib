@@ -1,3 +1,6 @@
+#include "ec440threads.h"
+#include "queue.h"
+
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h>
@@ -5,9 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "ec440threads.h"
-#include "queue.h"
 
 #ifndef PREEMPT
 #define PREEMPT 1 /* flag to enable preemption */
@@ -84,7 +84,7 @@ static void thread_init(TCB *new_thread);
 static void reg_init(TCB *new_thread, void *(*start_routine)(void *),
                      void *arg);
 
-static void clear_waitlist(int *waitlist);
+static void clear_waitlist(queue_t *waitqueue);
 
 void scheduler_init()
 {
@@ -165,11 +165,8 @@ void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg)
     *sp = (unsigned long)pthread_exit;
 }
 
-void schedule(int signal)
+void schedule(int _signal)
 {
-    if (threads[current_thread].has_mutex)
-        return;
-
     if (threads[current_thread].status != TS_EXITED)
     {
         if (setjmp(threads[current_thread].registers))

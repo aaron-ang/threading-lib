@@ -28,16 +28,16 @@ jobs:
       - name: Run tests with preemption
         run: |
           echo "Running tests with PREEMPT=1"
-          make check
+          make test
 
       - name: Run tests without preemption
         run: |
           echo "Running tests with PREEMPT=0"
           make clean
-          make PREEMPT=0 check
+          make PREEMPT=0 test
 
       - name: Compare with system pthreads
         run: |
           echo "Testing against system pthreads"
           make clean
-          make TSTMYPTHREADS=0 check
+          make TSTMYPTHREADS=0 test
