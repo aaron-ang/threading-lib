@@ -15,7 +15,7 @@ void *busy_func(void *arg) {
     }
   }
 
-  pthread_exit(&arg);
+  pthread_exit(arg);
   return NULL;
 }
 
@@ -29,5 +29,5 @@ int main() {
 
   pthread_create(&thread, NULL, busy_func, (void *)test);
   pthread_join(thread, &pret);
-  assert(*(long *)pret == test);
+  assert((long)pret == test);
 }

@@ -9,7 +9,7 @@ failed_tests=""
 for test_file in $all_tests; do
 	echo "===== ${test_file} ====="
 	rm -f testfs # Tidy up from previous tests
-	timeout ${TIMEOUT_SECONDS} ${test_file}
+	timeout ${TIMEOUT_SECONDS} ${test_file} >/dev/null
 	rc=$?
 	if [ ${rc} -eq 0 ]; then
 		echo "PASS"
