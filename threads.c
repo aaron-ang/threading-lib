@@ -22,9 +22,6 @@ typedef struct
     int flag;
 } mutex_t;
 
-// usr/include/x86_64-linux-gnu/bits: struct_mutex.h, pthreadtypes.h,
-// pthreadtypes-arch.h
-
 typedef union
 {
     pthread_mutex_t mutex;
@@ -63,7 +60,6 @@ typedef struct thread_control_block
 } TCB;
 
 queue_t ready_queue;
-queue_t waiting_queue;
 
 TCB threads[MAX_THREADS];
 int current_thread = 0;
@@ -91,7 +87,6 @@ void scheduler_init()
     assert(num_threads == 0);
 
     queue_init(&ready_queue);
-    queue_init(&waiting_queue);
 
     TCB *main_thread = get_new_thread();
     thread_init(main_thread);
@@ -302,28 +297,40 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 int pthread_barrier_init(pthread_barrier_t *restrict barrier,
                          const pthread_barrierattr_t *attr, unsigned count)
 {
-    if (count == 0)
+    if (count == 0 || count > MAX_THREADS)
         return EINVAL;
 
     lock();
+
+    my_barrier_t *b = (my_barrier_t *)barrier;
+    if (b->my_barrier.limit != 0 || b->my_barrier.count != 0)
     {
-        my_barrier_t *b = (my_barrier_t *)barrier;
-        b->my_barrier.limit = count;
-        b->my_barrier.count = 0;
-        queue_init(&b->my_barrier.waitqueue);
+        unlock();
+        return EINVAL;
     }
+
+    b->my_barrier.limit = count;
+    b->my_barrier.count = 0;
+    queue_init(&b->my_barrier.waitqueue);
+
     unlock();
     return 0;
 }
 
 int pthread_barrier_destroy(pthread_barrier_t *barrier)
 {
-    my_barrier_t *b = (my_barrier_t *)barrier;
     lock();
+
+    my_barrier_t *b = (my_barrier_t *)barrier;
+    if (!queue_is_empty(&b->my_barrier.waitqueue))
     {
-        clear_waitlist(&b->my_barrier.waitqueue);
-        memset(&b->my_barrier, 0, sizeof(barrier_t));
+        unlock();
+        return EBUSY;
     }
+
+    clear_waitlist(&b->my_barrier.waitqueue);
+    memset(&b->my_barrier, 0, sizeof(barrier_t));
+
     unlock();
     return 0;
 }
@@ -353,7 +360,6 @@ int pthread_barrier_wait(pthread_barrier_t *barrier)
     {
         threads[current_thread].status = TS_BLOCKED;
         queue_enqueue(&b->my_barrier.waitqueue, current_thread);
-        queue_enqueue(&waiting_queue, current_thread);
 
         unlock();
         schedule(0);

@@ -11,7 +11,7 @@ Implements the following pthread interfaces:
 Threads are cycled in a [round-robin](https://en.wikipedia.org/wiki/Round-robin_scheduling) fashion and the scheduler uses `SIGALRM` for timeouts.
 
 ## Synchronization features
-1. Thread locking and unlocking, to prevent the scheduler from running at specific times.
+1. Signal blocking mechanisms (`lock()` and `unlock()`), which block/unblock `SIGALRM` to create critical sections where scheduling cannot occur.
 2. An implementation of mutex interfaces:
    - `pthread_mutex_init`: Initializes a mutex with default attributes
    - `pthread_mutex_lock`: Acquires a lock on the specified mutex
