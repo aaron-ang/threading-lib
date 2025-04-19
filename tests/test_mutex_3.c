@@ -9,19 +9,22 @@ void *thread_func(void *arg) {
   if (thread_id != 2) {
     pthread_mutex_lock(&mutex);
     printf("Thread %ld acquired the mutex.\n", thread_id);
-    // Simulate some work
-    usleep(500000);
+    for (int i = 0; i < 1e6; ++i) {
+      // Simulate some work
+    }
     printf("Thread %ld released the mutex.\n", thread_id);
     pthread_mutex_unlock(&mutex);
   } else {
     pthread_mutex_lock(&mutex);
     printf("Thread %ld acquired the mutex.\n", thread_id);
     // Hold the mutex for a longer time to let other threads contend for it
-    usleep(1000000);
+    for (int i = 0; i < 1e9; ++i) {
+      // Simulate some work
+    }
     printf("Thread %ld released the mutex.\n", thread_id);
     pthread_mutex_unlock(&mutex);
   }
-  return NULL;
+  pthread_exit(NULL);
 }
 
 int main() {
@@ -30,7 +33,7 @@ int main() {
   pthread_mutex_init(&mutex, NULL);
 
   for (int i = 0; i < 5; i++) {
-    pthread_create(&threads[i], NULL, thread_func, (void*)(long)(i + 1));
+    pthread_create(&threads[i], NULL, thread_func, (void*)(long)i);
   }
 
   for (int i = 0; i < 5; i++) {

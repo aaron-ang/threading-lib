@@ -9,7 +9,9 @@ pthread_barrier_t barrier;
 void *thread_func(void *id) {
   int tid = *(int *)id;
   printf("thread %d doing work before barrier\n", tid);
-  sleep(1); // simulate work
+  for (int i = 0; i < 1e9; ++i) {
+    // Simulate some work
+  }
 
   // Wait on the barrier
   printf("thread %d is in barrier \n", tid);
@@ -22,7 +24,7 @@ void *thread_func(void *id) {
     printf("thread %d passed barrier\n", tid);
   }
 
-  return NULL;
+  pthread_exit(NULL);
 }
 
 int main(void) {
@@ -76,9 +78,7 @@ int main(void) {
 
   // create threads
   for (int i = 0; i < NUM_THREADS; i++) {
-    thread_ids[i] =
-        i + 1 +
-        NUM_THREADS * 2; // thread ids from NUM_THREADS*2+1 to NUMTHREADS*3
+    thread_ids[i] = i + 1 + (NUM_THREADS * 2); // thread ids from NUM_THREADS*2+1 to NUMTHREADS*3
     if (pthread_create(&threads[i], NULL, thread_func, &thread_ids[i]) != 0) {
       printf("could not create thread %d\n", i);
       return -1;

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include <pthread.h>
 
 /* How many threads (aside from main) to create */
@@ -27,8 +28,8 @@ void *increment(void *arg) {
     assert(my_int.val == i);
     my_int.val++;
   }
+  some_value[my_num] = my_int.val;
   pthread_mutex_unlock(&my_int.mutex);
-  some_value[my_num] = my_num;
   pthread_exit(&some_value[my_num]);
 }
 
@@ -44,6 +45,7 @@ int main() {
   }
   for (i = 0; i < THREAD_CNT; i++) {
     pthread_join(threads[i], &pret);
+    printf("Thread %lu returned %d\n", i, *(int *)pret);
   }
 
   assert(pthread_mutex_destroy(&my_int.mutex) == 0);

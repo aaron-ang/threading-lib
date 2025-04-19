@@ -37,8 +37,8 @@ ifeq ($(PREEMPT),0)
 endif
 
 # Library configuration
-TSTMYPTHREADS=1
-ifeq ($(TSTMYPTHREADS),1)
+MY_PTHREADS=1
+ifeq ($(MY_PTHREADS),1)
   mythread=threads.o
 else
   mythread=

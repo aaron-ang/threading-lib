@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define THREAD_CNT 126
 #define NUM_ITERS 10000
@@ -15,10 +16,9 @@ static void *increment_thread(void *arg) {
   int my_num = (long)arg;
   for (int i = 0; i < NUM_ITERS; i++) {
     pthread_mutex_lock(&mutex);
-    shared_counter++;
+    some_value[my_num] = ++shared_counter;
     pthread_mutex_unlock(&mutex);
   }
-  some_value[my_num] = NUM_ITERS;
   pthread_exit(&some_value[my_num]);
 }
 
@@ -26,10 +26,9 @@ static void *decrement_thread(void *arg) {
   int my_num = (long)arg;
   for (int i = 0; i < NUM_ITERS; i++) {
     pthread_mutex_lock(&mutex);
-    shared_counter--;
+    some_value[my_num] = --shared_counter;
     pthread_mutex_unlock(&mutex);
   }
-  some_value[my_num] = NUM_ITERS;
   pthread_exit(&some_value[my_num]);
 }
 
@@ -44,10 +43,11 @@ int main() {
 
   for (i = 0; i < THREAD_CNT; i += 2) {
     pthread_create(&tids[i], NULL, increment_thread, (void *)i);
-    pthread_create(&tids[i + 1], NULL, decrement_thread, (void *)i);
+    pthread_create(&tids[i + 1], NULL, decrement_thread, (void *)(i + 1));
   }
   for (i = 0; i < THREAD_CNT; i += 1) {
     pthread_join(tids[i], &pret);
+    printf("Thread %ld returned %d\n", i, *(int *)pret);
   }
 
   assert(pthread_mutex_destroy(&mutex) == 0);

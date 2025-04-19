@@ -21,7 +21,9 @@ void *thread_func(void *arg) {
 void *print_hello(void *arg) {
   for (int ii = 0; ii < 4; ++ii) {
     printf("hello!\n");
-    usleep(100000);
+    for (int i = 0; i < 1e9; ++i) {
+      // Simulate some work
+    }
   }
   pthread_exit(NULL);
 }

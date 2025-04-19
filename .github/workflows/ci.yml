@@ -25,9 +25,15 @@ jobs:
       - name: Build threading library and tests
         run: make build
 
+      - name: Run tests with system pthreads
+        run: |
+          echo "Testing with system pthreads"
+          make MY_PTHREADS=0 test
+
       - name: Run tests with preemption
         run: |
           echo "Running tests with PREEMPT=1"
+          make clean
           make test
 
       - name: Run tests without preemption
@@ -35,9 +41,3 @@ jobs:
           echo "Running tests with PREEMPT=0"
           make clean
           make PREEMPT=0 test
-
-      - name: Compare with system pthreads
-        run: |
-          echo "Testing against system pthreads"
-          make clean
-          make TSTMYPTHREADS=0 test

@@ -13,8 +13,10 @@ void *thread_function(void *arg) {
   pthread_mutex_lock(&mutex);
   printf("Thread %ld: ii value: %d\n", thread_id, ii);
   ii++;
-  usleep(100000);
-  counter = counter + ii;
+  for (int i = 0; i < 1e9; ++i) {
+    // Simulate some work
+  }
+  counter += ii;
   printf("Thread %ld: Counter value: %d\n", thread_id, counter);
   pthread_mutex_unlock(&mutex);
   pthread_exit(NULL);
@@ -26,7 +28,7 @@ int main() {
   pthread_mutex_init(&mutex, NULL);
 
   for (int i = 0; i < THREADS; i++) {
-    pthread_create(&threads[i], NULL, thread_function, (void*)(long)(i + 1));
+    pthread_create(&threads[i], NULL, thread_function, (void*)(long)i);
   }
 
   for (int i = 0; i < THREADS; i++) {
