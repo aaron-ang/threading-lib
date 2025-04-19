@@ -2,14 +2,14 @@
 #include <stdio.h>
 #include <unistd.h> // For sleep function
 
-#define NUM_THREADS 3
+#define NUM_THREADS 8
 
 pthread_barrier_t barrier;
 
 void *thread_func(void *id) {
   int tid = *(int *)id;
   printf("thread %d doing work before barrier\n", tid);
-  for (int i = 0; i < 1e9; ++i) {
+  for (int i = 0; i < 1e8; ++i) {
     // Simulate some work
   }
 
@@ -54,8 +54,7 @@ int main(void) {
   printf("\nREUSE BARRIER:\n");
   // create threads
   for (int i = 0; i < NUM_THREADS; i++) {
-    thread_ids[i] =
-        i + 1 + NUM_THREADS; // thread ids from NUM_THREADS+1 to NUMTHREADS*2
+    thread_ids[i] = i + 1 + NUM_THREADS; // thread ids from NUM_THREADS+1 to NUMTHREADS*2
     if (pthread_create(&threads[i], NULL, thread_func, &thread_ids[i]) != 0) {
       printf("could not create thread %d\n", i);
       return -1;

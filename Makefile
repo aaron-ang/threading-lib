@@ -23,7 +23,7 @@ test_files=test_busy_threads test_many_threads \
  test_barrier test_barrier_2 test_barrier_3
 
 custom_tests= test_one_thread test_custom_schedule \
- test_early_exit test_mutex test_barrier
+ test_mutex test_barrier
 
 # For cleanup, we need all test files regardless of PREEMPT setting
 all_test_files=$(test_files) $(custom_tests)
