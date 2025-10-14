@@ -1,9 +1,11 @@
 # Compiler and flags
-CC = gcc
+CC = clang
 WARNINGS = -Wall -Werror
 OPTFLAGS = -O0 -g
 STDFLAGS = -std=gnu99
 override CFLAGS := $(WARNINGS) $(STDFLAGS) $(OPTFLAGS) $(CFLAGS) -I.
+override CFLAGS += -fno-omit-frame-pointer -fno-optimize-sibling-calls -fasynchronous-unwind-tables
+override CFLAGS += -fno-inline
 
 # Debug support
 DEBUG=0

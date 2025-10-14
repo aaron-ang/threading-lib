@@ -7,6 +7,7 @@
 
 #ifndef __EC440THREADS__
 #define __EC440THREADS__
+
 /*
  * This file is derived from code provided by Prof. Egele
  */
@@ -46,6 +47,16 @@ enum JBL {
 
 // to supress compiler error saying these static functions may not be used...
 void schedule(int signal) __attribute__((unused));
+static unsigned long int _ptr_mangle(unsigned long int p)
+    __attribute__((unused));
+static unsigned long int _ptr_demangle(unsigned long int p)
+    __attribute__((unused));
+
+static void set_reg(jmp_buf *buf, enum JBL reg, unsigned long int val)
+    __attribute__((unused));
+static unsigned long int get_reg(jmp_buf *buf, enum JBL reg)
+    __attribute__((unused));
+static void *start_thunk() __attribute__((unused));
 
 /*
  * Unfortunately, there is a complication on the Linux systems in the
@@ -138,17 +149,5 @@ static void *start_thunk() {
       : "%rdi");
   __builtin_unreachable();
 }
-
-// to supress compiler error say these static functions may not be used...
-static unsigned long int _ptr_mangle(unsigned long int p)
-    __attribute__((unused));
-static unsigned long int _ptr_demangle(unsigned long int p)
-    __attribute__((unused));
-
-static void set_reg(jmp_buf *buf, enum JBL reg, unsigned long int val)
-    __attribute__((unused));
-static unsigned long int get_reg(jmp_buf *buf, enum JBL reg)
-    __attribute__((unused));
-static void *start_thunk() __attribute__((unused));
 
 #endif
