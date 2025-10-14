@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdatomic.h>
 
 #ifndef PREEMPT
 #define PREEMPT 1 /* flag to enable preemption */
@@ -19,8 +20,8 @@
 
 typedef struct
 {
-    int flag;
-    queue_t wait_queue;
+    bool held;
+    queue_t blocking_threads; // thread-unsafe queue of blocked threads
 } mutex_t;
 
 typedef union
@@ -33,7 +34,7 @@ typedef struct
 {
     unsigned limit;
     unsigned count;
-    queue_t wait_queue;
+    queue_t waiting_threads;
 } barrier_t;
 
 typedef union
@@ -59,19 +60,23 @@ typedef struct thread_control_block
     void *ret_val;
 } TCB;
 
-queue_t ready_queue;
+queue_t ready_queue; // thread-unsafe queue of ready threads
 
 TCB threads[MAX_THREADS];
+
 int current_thread = 0;
+
 int num_threads = 0;
+
+static atomic_flag threading_system_busy = ATOMIC_FLAG_INIT;
 
 static void scheduler_init();
 
 static void init_handler();
 
-static void lock();
+static void disable_interrupts();
 
-static void unlock();
+static void enable_interrupts();
 
 static TCB *get_new_thread();
 
@@ -106,7 +111,7 @@ void init_handler()
     ualarm(QUANTUM, QUANTUM);
 }
 
-void lock()
+void disable_interrupts()
 {
     sigset_t mask;
     sigemptyset(&mask);
@@ -114,7 +119,7 @@ void lock()
     assert(sigprocmask(SIG_BLOCK, &mask, NULL) == 0);
 }
 
-void unlock()
+void enable_interrupts()
 {
     sigset_t mask;
     sigemptyset(&mask);
@@ -157,7 +162,8 @@ void reg_init(TCB *new_thread, void *(*start_routine)(void *), void *arg)
     *sp = (unsigned long)pthread_exit;
 }
 
-void schedule(int _signal)
+// Preemptive scheduler (called by alarm)
+void schedule(int signal)
 {
     if (threads[current_thread].status != TS_EXITED)
     {
@@ -168,17 +174,36 @@ void schedule(int _signal)
     if (threads[current_thread].status == TS_RUNNING)
     {
         threads[current_thread].status = TS_READY;
-        queue_enqueue(&ready_queue, current_thread);
+        enqueue(&ready_queue, current_thread);
     }
 
-    int next_thread = queue_dequeue(&ready_queue);
+    int next_thread = dequeue(&ready_queue);
     if (next_thread == -1)
         return;
 
     current_thread = next_thread;
     threads[current_thread].status = TS_RUNNING;
-    longjmp(threads[current_thread].registers,
-            (long)threads[current_thread].id + 1);
+    longjmp(threads[current_thread].registers, 1);
+}
+
+// Mesa style thread sleep (for blocking operations)
+void thread_sleep()
+{
+    if (threads[current_thread].status != TS_EXITED)
+    {
+        if (setjmp(threads[current_thread].registers))
+            return;
+    }
+
+    assert(threads[current_thread].status == TS_BLOCKED);
+
+    int next_thread = dequeue(&ready_queue);
+    if (next_thread == -1)
+        return;
+
+    current_thread = next_thread;
+    threads[current_thread].status = TS_RUNNING;
+    longjmp(threads[current_thread].registers, 1);
 }
 
 // Library functions
@@ -203,7 +228,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     thread_init(new_thread);
     reg_init(new_thread, start_routine, arg);
     new_thread->status = TS_READY;
-    queue_enqueue(&ready_queue, new_thread->id);
+    enqueue(&ready_queue, new_thread->id);
 
     return 0;
 }
@@ -243,53 +268,65 @@ int pthread_mutex_init(pthread_mutex_t *mutex,
                        const pthread_mutexattr_t *attr)
 {
     my_mutex_t *m = (my_mutex_t *)mutex;
-    m->my_mutex.flag = 0;
-    queue_init(&m->my_mutex.wait_queue);
+    m->my_mutex.held = false;
+    queue_init(&m->my_mutex.blocking_threads);
     return 0;
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
     my_mutex_t *m = (my_mutex_t *)mutex;
-    if (!queue_is_empty(&m->my_mutex.wait_queue) || m->my_mutex.flag)
+    if (!is_empty(&m->my_mutex.blocking_threads) || m->my_mutex.held)
         return EBUSY;
     return 0;
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-    lock();
+    while (atomic_flag_test_and_set(&threading_system_busy))
+        ;
 
-    my_mutex_t *m = (my_mutex_t *)mutex;
-    if (m->my_mutex.flag)
+    disable_interrupts();
+
+    mutex_t *m = &((my_mutex_t *)mutex)->my_mutex;
+
+    assert(!contains(&m->blocking_threads, current_thread));
+
+    if (m->held)
     {
         threads[current_thread].status = TS_BLOCKED;
-        queue_enqueue(&m->my_mutex.wait_queue, current_thread);
-        unlock();
-        schedule(0); // yield to another thread
-        lock();
+        remove(&ready_queue, current_thread);
+        enqueue(&m->blocking_threads, current_thread);
+        thread_sleep();
     }
-    m->my_mutex.flag = 1;
 
-    unlock();
+    m->held = true;
+    atomic_flag_clear(&threading_system_busy);
+    enable_interrupts();
     return 0;
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
-    lock();
+    while (atomic_flag_test_and_set(&threading_system_busy))
+        ;
 
-    my_mutex_t *m = (my_mutex_t *)mutex;
-    m->my_mutex.flag = 0;
-    if (!queue_is_empty(&m->my_mutex.wait_queue))
+    disable_interrupts();
+
+    mutex_t *m = &((my_mutex_t *)mutex)->my_mutex;
+    assert(m->held);
+
+    m->held = false;
+
+    if (!is_empty(&m->blocking_threads))
     {
-        int thread_index = queue_dequeue(&m->my_mutex.wait_queue);
+        int thread_index = dequeue(&m->blocking_threads);
         threads[thread_index].status = TS_READY;
-        queue_enqueue(&ready_queue, thread_index);
+        enqueue(&ready_queue, thread_index);
     }
-    schedule(0); // yield to another thread
 
-    unlock();
+    atomic_flag_clear(&threading_system_busy);
+    enable_interrupts();
     return 0;
 }
 
@@ -299,67 +336,76 @@ int pthread_barrier_init(pthread_barrier_t *restrict barrier,
     if (count == 0 || count > MAX_THREADS)
         return EINVAL;
 
-    lock();
+    disable_interrupts();
 
-    my_barrier_t *b = (my_barrier_t *)barrier;
-    if (b->my_barrier.limit != 0 || b->my_barrier.count != 0)
+    barrier_t *b = &((my_barrier_t *)barrier)->my_barrier;
+    if (b->limit != 0 || b->count != 0)
     {
-        unlock();
+        enable_interrupts();
         return EINVAL;
     }
 
-    b->my_barrier.limit = count;
-    b->my_barrier.count = 0;
-    queue_init(&b->my_barrier.wait_queue);
+    b->limit = count;
+    b->count = 0;
+    queue_init(&b->waiting_threads);
 
-    unlock();
+    enable_interrupts();
     return 0;
 }
 
 int pthread_barrier_destroy(pthread_barrier_t *barrier)
 {
-    lock();
+    disable_interrupts();
 
-    my_barrier_t *b = (my_barrier_t *)barrier;
-    if (!queue_is_empty(&b->my_barrier.wait_queue))
+    barrier_t *b = &((my_barrier_t *)barrier)->my_barrier;
+    if (!is_empty(&b->waiting_threads))
     {
-        unlock();
+        enable_interrupts();
         return EBUSY;
     }
-    memset(&b->my_barrier, 0, sizeof(barrier_t));
+    memset(&b, 0, sizeof(barrier_t));
 
-    unlock();
+    enable_interrupts();
     return 0;
 }
 
 int pthread_barrier_wait(pthread_barrier_t *barrier)
 {
-    lock();
-    my_barrier_t *b = (my_barrier_t *)barrier;
-    b->my_barrier.count++;
+    while (atomic_flag_test_and_set(&threading_system_busy))
+        ;
 
-    if (b->my_barrier.count >= b->my_barrier.limit)
+    disable_interrupts();
+
+    barrier_t *b = &((my_barrier_t *)barrier)->my_barrier;
+    b->count++;
+
+    if (b->count >= b->limit)
     {
-        b->my_barrier.count = 0;
+        // All threads have arrived - broadcast to wake everyone
+        b->count = 0;
 
         // Move all threads from wait queue to ready queue
-        int thread_index;
-        while ((thread_index = queue_dequeue(&b->my_barrier.wait_queue)) != -1)
+        int woken_thread;
+        while ((woken_thread = dequeue(&b->waiting_threads)) != -1)
         {
-            threads[thread_index].status = TS_READY;
-            queue_enqueue(&ready_queue, thread_index);
+            threads[woken_thread].status = TS_READY;
+            enqueue(&ready_queue, woken_thread);
         }
 
-        unlock();
+        atomic_flag_clear(&threading_system_busy);
+        enable_interrupts();
         return PTHREAD_BARRIER_SERIAL_THREAD;
     }
     else
     {
+        // Not all threads have arrived - wait
         threads[current_thread].status = TS_BLOCKED;
-        queue_enqueue(&b->my_barrier.wait_queue, current_thread);
+        enqueue(&b->waiting_threads, current_thread);
 
-        unlock();
-        schedule(0); // yield to another thread
+        thread_sleep();
+
+        atomic_flag_clear(&threading_system_busy);
+        enable_interrupts();
         return 0;
     }
 }

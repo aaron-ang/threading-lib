@@ -22,12 +22,12 @@ static void queue_init(queue_t *q)
     q->size = 0;
 }
 
-static bool queue_is_empty(queue_t *q)
+static bool is_empty(queue_t *q)
 {
     return q->size == 0;
 }
 
-static void queue_enqueue(queue_t *q, int thread_index)
+static void enqueue(queue_t *q, int thread_index)
 {
     queue_node_t *new_node = malloc(sizeof(queue_node_t));
     assert(new_node);
@@ -35,7 +35,7 @@ static void queue_enqueue(queue_t *q, int thread_index)
     new_node->thread_index = thread_index;
     new_node->next = NULL;
 
-    if (queue_is_empty(q))
+    if (is_empty(q))
     {
         q->front = new_node;
     }
@@ -47,9 +47,9 @@ static void queue_enqueue(queue_t *q, int thread_index)
     q->size++;
 }
 
-static int queue_dequeue(queue_t *q)
+static int dequeue(queue_t *q)
 {
-    if (queue_is_empty(q))
+    if (is_empty(q))
         return -1;
 
     queue_node_t *node = q->front;
@@ -63,4 +63,41 @@ static int queue_dequeue(queue_t *q)
     q->size--;
 
     return thread_index;
+}
+
+static bool contains(queue_t *q, int thread_index)
+{
+    queue_node_t *node;
+    for (node = q->front; node != NULL; node = node->next)
+    {
+        if (node->thread_index == thread_index)
+            return true;
+    }
+    return false;
+}
+
+static void remove(queue_t *q, int thread_index)
+{
+    queue_node_t *curr = q->front;
+    queue_node_t *prev = NULL;
+
+    while (curr && curr->thread_index != thread_index)
+    {
+        prev = curr;
+        curr = curr->next;
+    }
+
+    if (!curr)
+        return;
+
+    if (prev)
+        prev->next = curr->next;
+    else
+        q->front = curr->next;
+
+    if (q->rear == curr)
+        q->rear = prev;
+
+    free(curr);
+    q->size--;
 }
