@@ -24,9 +24,11 @@ for test_file in $all_tests; do
 	fi
 done
 
-echo "${fail_count} out of ${test_count} tests failed."
-
 if [ ${fail_count} -gt 0 ]; then
+	echo "${fail_count} out of ${test_count} tests failed."
 	echo "Failed tests: ${failed_tests}"
 	exit 1
+else
+	echo "All ${test_count} tests passed."
+	exit 0
 fi
